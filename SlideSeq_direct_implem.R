@@ -1,3 +1,4 @@
+#!/bin/env/Rscript
 #-----------------------------------------------------------------------
 #
 # Moira Ek
@@ -9,7 +10,7 @@
 # 
 #-----------------------------------------------------------------------
 
-setwd("/home/moiraek/summerp19/SlideSeq_etc/")
+setwd("/home/moiraek/summerp19/SlideSeq_etc/Till_git")
 library(STutility)
 library(Seurat)
 
