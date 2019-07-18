@@ -117,11 +117,11 @@ equal_no_spots<-unique(equal_no_spots)
 #  eukl. Differensen mellan fördelningen av dessa avstånd (i samma
 #  bins som för slumpfördelningarna) och medelfördelningen tas,
 #  L1-normen beräknas (L1_norm_real), och p-värdet beräknas, som 
-#  p=(slumpmässiga prover med L1>L1(sanna provet))/
+#  p=(antal slumpmässiga prover med L1 > L1(sanna provet))/
 #  (totalt antal slumpmässiga prover). Om täljaren är 0 kan dock 
 #  bara sägas att p<1/n. Dessa fall sparas i nuläget som p=1/(10n),
-#  för hanteringens skull. I suppl. tillartikeln säger de att 
-#  p=(slumpm prover med L1<L1(sanna))/(totalt antal slumpmässiga),
+#  för hanteringens skull. I suppl. till artikeln säger de att 
+#  p=(antal slumpm prover med L1<L1(sanna))/(totalt antal slumpmässiga),
 #  men detta motsäger resonemanget de för, och exemplet i figur S10. 
 #--------------------------------------------------------------------
 
