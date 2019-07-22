@@ -1,16 +1,30 @@
-#!/bin/Rscript
+#!/usr/bin/Rscript
 #-----------------------------------------------------------------------
 #
 # Moira Ek
 # 2019 07 18
-# Försök att implementera SlideSeq-DGE-metoden
-# 1. Direkt, utan att ännu ha gjort några anpassningar till ST,
-#    jobbar med råa countdata initialt. Använder spotkoordinater för
-#    avstånd.
-# 2. Försök att optimera koden för att försnabba processen.
-# 3. Test: går det att inte behöva sampla på nytt för varje gen?
-#     -testa att gruppera ihop de gener som har samma antal spots där
-#     de uttrycks.
+# Direct implementation of the SlideSeq DGE method. The general idea 
+#  is to, for each gene, first calculate the distribution of distances
+#  between the spots in which it is expressed. In the paper by 
+#  Rodriques et al. (Science 363, 1463–1467, 2019. 
+#  doi 10.1126/science.aaw1219) 1000 random samples of the same number
+#  of spots are then obtained, by sampling spots using probabilities
+#  proportional to the total number of transcripts captured in each
+#  spot, without replacement. For each such set of random spots, 
+#  the distribution of distances between the spots is calculated, and 
+#  the element-wise mean of the 1000 distributions is taken to obtain 
+#  a mean distribution. The difference between the real distribution 
+#  and the mean distribution as well as between each of the random 
+#  samples and the mean distribution is calculated. The L1 norm of 
+#  these difference vectors is then used as the test statistic, to 
+#  determine whether the gene in question has a non-random spatial
+#  distribution.
+# 1. Initially implemented without any adaptations to ST, working with
+#     raw count data, and using spot coordinates for the distances.
+# 2. Optimization of the code, including not sampling anew for every
+#     gene. The genes that are expressed in the same number of spots
+#     are grouped together, and the same set of 1000 random sets
+#     of spots are used for all of the genes within such a group.
 # 
 #-----------------------------------------------------------------------
 
@@ -18,11 +32,11 @@ setwd("/home/moiraek/summerp19/SlideSeq_etc/Till_git")
 
 data <- as.data.frame(t(read.table("Rep1_MOB_count_matrix-1.tsv", check.names=FALSE)))
 
-#Ta bort gener med yttryck i färre än 5 spots
+# Remove genes with expression in less than 5 spots.
 testdata <- data[rowSums(data!=0)>4,]
 
 #--------------------------------------------------------------------
-# Skapa en avståndsmatris
+# Create a distance matrix
 #--------------------------------------------------------------------
 
 start_time <- Sys.time()
@@ -47,9 +61,10 @@ for (j in 1:(ncol(testdata) - 1)){
 
 
 #--------------------------------------------------------------------
-# Beräkna sannolikheter för framslupning av spots. Indices då den
-#  faktiska framslumpningen är av det index en viss spot har i
-#  avståndsmatrisen.
+# Calcuate the probability of sampling the spots. (Proportional to 
+#  the total number of transcripts in each spot.) Indices are
+#  calculated since the actual output from the sampling will be 
+#  the index a specific spot has in the distance matrix. 
 #--------------------------------------------------------------------
 
 tot_spot <- colSums(testdata)
@@ -62,24 +77,25 @@ indices <- 1:length(P)
 
 
 #--------------------------------------------------------------------
-# Gruppering av generna efter antalet spots de uttrycks i --> antalet
-#  spots som ska samplas.
+# Grouping of the genes according to the number of spots in which 
+#  they are expressed, and thereby the number of spots that are to 
+#  be sampled. 
 #--------------------------------------------------------------------
 
-# Beräkna det maximala avståndet mellan inkluderade spots, för att
-#  sätta upp lämpliga breakpoints för hist. 0.5 p.g.a. de faktiska
-#  avstånden i ST-arrayen.
+# Calculate the maximum distance between included spots, in order
+#  to define appropriate breakpoints for hist(). 0.5 due to the 
+#  actual distances in the ST array.
 maxdist <- max(euk)
 breaks <- seq(0,maxdist+0.5, by=0.5)
 
 
-# n = antal slumpfördelningar att dra för varje gen.
-# p = dataframe för p-värdena
-# non_zero = antalet spots med nollskilt uttryck för varje gen
+# n = the number of random samples to draw for each gene.
+# p = dataframe for the p-values.
+# non_zero = the number of spots with non-zero expression of each gene.
 n <- 1000
 p <- vector(mode="numeric", length=nrow(testdata))
 p <- as.data.frame(p, row.names=rownames(testdata), 
-                   col.names="p-value")
+                   col.names="p_value")
 
 non_zero <- matrix(nrow=nrow(testdata),ncol=1)
 rownames(non_zero)<-rownames(testdata)
@@ -87,9 +103,9 @@ for (i in 1:nrow(non_zero)){
   non_zero[i,1] <- ncol(testdata[i, which(testdata[i,]!=0)])
 }
 
-# Grupperar generna som uttrycks i samma antal spots på raderna i
-#  equal_no_spots, ger varje rad antalet spots som namn. unique -->
-#  varje grupp av gener finns bara med en gång.
+# Group the genes expressed in the same number of spots on the rows of
+#  equal_no_spots, each row is given the number of spots as its name.
+#  unique --> each group of genes is only included once.
 equal_no_spots <- matrix(NA,nrow=length(non_zero),
                          ncol=length(non_zero))
 rownames(equal_no_spots)<-rownames(testdata)
@@ -103,39 +119,43 @@ equal_no_spots<-unique(equal_no_spots)
 
 
 #--------------------------------------------------------------------
-# Gå igenom grupperna en och en. För varje grupp samplas först
-#  lika många index som spots där dessa gener uttrycks,
-#  countsen i varje bin definierad enligt ovan sparas på raderna i 
-#  counts_matrix_rand, och detta upprepas 1000 (n) gånger, tills
-#  matrisen är fylld. Kolumnvisa medelvärden av denna matris ger 
-#  medelfördelningen, mean_counts. diff_matr_rand sparar undan
-#  differenserna mellan varje enskild slumpfördelning och medel-
-#  fördelningen. L1-normerna av detta sparas i L1_norms_rand.
-#  Sedan gås generna igenom en och en. Tar först ut indexen för
-#  de nollskilda elementen, d.v.s. de spots där genen i fråga 
-#  uttrycks. Detta används för att ta fram avstånden, som sparas i
-#  eukl. Differensen mellan fördelningen av dessa avstånd (i samma
-#  bins som för slumpfördelningarna) och medelfördelningen tas,
-#  L1-normen beräknas (L1_norm_real), och p-värdet beräknas, som 
-#  p=(antal slumpmässiga prover med L1 > L1(sanna provet))/
-#  (totalt antal slumpmässiga prover). Om täljaren är 0 kan dock 
-#  bara sägas att p<1/n. Dessa fall sparas i nuläget som p=1/(10n),
-#  för hanteringens skull. I suppl. till artikeln säger de att 
-#  p=(antal slumpm prover med L1<L1(sanna))/(totalt antal slumpmässiga),
-#  men detta motsäger resonemanget de för, och exemplet i figur S10. 
+# Go through the groups one by one. For each group the same number 
+#  of indices as spots where these genes are expressed are first 
+#  sampled. For each random sample, the counts in each bin, defined 
+#  above, are saved as the rows of counts_matrix_rand, and this is
+#  repeated n times (here, n=1000), until the matrix has been filled.
+#  Column-wise means of this matrix gives the mean distribution,
+#  mean_counts. The differences between each individual random 
+#  distribution and the mean distribution are saved in diff_matr_rand.
+#  The L1 norms of these differences are saved in L1_norms_rand.
+#  The genes are then taken one by one. First, the indices of the
+#  non-zero elements are obtained, i.e. the spots where the gene in
+#  question is expressed. This is used to obtain the distances, which
+#  are saved in eukl. The difference between the distribution of 
+#  these distances (in the same bins as the random distributions)
+#  and the mean distance are calculated, the L1 norm is calculated 
+#  (L1_norm_real), and the p-value is calculated as 
+#  p=(no random samples with L1>L1(true sample))/(total no random 
+#  samples). If the numerator is equal to 0, it can however only
+#  be said that p<1/n. These cases are currently saved as p=1/(10n).
+#  In the supplementary material to the paper by Rodriques et al. 
+#  (Science 363, 1463–1467, 2019. doi 10.1126/science.aaw1219)
+#  it is stated that p=(no random samples with L1<L1(true sample))/
+#  (total no random samples), but this contradicts their 
+#  argumentation, as well as the example in figure S10.
 #--------------------------------------------------------------------
 
 for (i in 1:nrow(equal_no_spots)){
-  # Countsen för generna i fråga
+  # The counts for the genes in question
   values <- testdata[na.omit(equal_no_spots[i,]),]
   
-  # Antalet avstånd som behövs
+  # The number of distances required
   len <- 0
   for (l in 1:(as.numeric(rownames(equal_no_spots)[i])-1)){
     len <- len + l
   }
   
-  # Slumpfördelningarna
+  # The random distributions
   eukl_for_rand <- vector(mode="numeric", length=len)
   
   n_random <- as.numeric(rownames(equal_no_spots)[i])
@@ -151,19 +171,19 @@ for (i in 1:nrow(equal_no_spots)){
   
   mean_counts <- colMeans(counts_matrix_rand)
   
-  # Elementvis differens mellan avståndsfördelningarna för
-  #  slumpsamplen, och medelfördelningen.
+  # Element-wise difference between the distance distributions of 
+  #  the random samples and the mean distribution.
   diff_matr_rand <- matrix(0, nrow=n, ncol=(length(breaks)-1))
   diff_matr_rand <- t(apply(counts_matrix_rand,1,'-',mean_counts))
   
-  # Ta beloppet av dessa, och summera över varje rad --> L1-normen
-  #  för avståndet mellan de slumpade fördelningarna och
-  #  den genomsnittliga fördelningen. 
+  # The absolute values of these differences are summed over each row,
+  #  yielding the L1 norms for the distances between each random 
+  #  distribution and the mean distribution.
   abs_diff_rand <- abs(diff_matr_rand)
   L1_norms_rand <- rowSums(abs_diff_rand)
   
   
-  # De verkliga fördelningarna
+  # The true distributions.
   eukl <- vector(mode="numeric", length=len)
   vals <- vector(mode="numeric", 
                  length=as.numeric(rownames(equal_no_spots)[i]) )
@@ -181,7 +201,7 @@ for (i in 1:nrow(equal_no_spots)){
     
     over_L1 <- L1_norms_rand[which(L1_norms_rand>L1_norm_real)]
     
-    # p-värdesberäkning
+    # Calculation of p values.
     if (length(over_L1)!=0){
       p[rownames(values)[j],1] <- length(over_L1)/n
     } else {
@@ -195,20 +215,20 @@ print(Sys.time() - start_time)
 
 
 # --------------------------------------------------------------------
-# Snabbplottning, test
+# Quick plotting, as a test
 # --------------------------------------------------------------------
 library(ggplot2)
 
 gene <- "2010300C02Rik"
 col <- as.numeric(as.vector(testdata[which(rownames(testdata)==gene),]))
-# Skapa färggradient
+# Create a colour gradient
 rbPal <- colorRampPalette(c('yellow','red'))
 color_vector <- rbPal(10)[as.numeric(cut(col,breaks = 10))]
 
 xcoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 1))
 ycoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 2))
 
-# Plotta arrayen med färg enligt gradienten
+# Plot the spot array with colours according to the gradient.
 plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
      ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5, 
      xaxt="n", yaxt="n", bty="n", col.main="black")
