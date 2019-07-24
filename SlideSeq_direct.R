@@ -31,9 +31,12 @@
 setwd("/home/moiraek/summerp19/SlideSeq_etc/Till_git")
 
 data <- as.data.frame(t(read.table("Rep1_MOB_count_matrix-1.tsv", check.names=FALSE)))
+#data <- as.data.frame(read.table("hippocampus_wt_rep1.tsv", check.names=FALSE))
 
-# Remove genes with expression in less than 5 spots.
-testdata <- data[rowSums(data!=0)>4,]
+# Remove genes with expression in less than 10 spots, and spots with
+#  expression of less than 200 genes.
+testdata <- data[rowSums(data!=0)>9,]
+testdata <- testdata[,colSums(testdata!=0)>199]
 
 #--------------------------------------------------------------------
 # Create a distance matrix
@@ -46,8 +49,10 @@ euk <- matrix(0, ncol=ncol(testdata), nrow=ncol(testdata))
 rownames(euk) <- spotnames
 colnames(euk) <-spotnames
 
-xcoords <- as.numeric(sapply(strsplit(colnames(testdata), "x"), "[[", 1))
-ycoords <- as.numeric(sapply(strsplit(colnames(testdata), "x"), "[[", 2))
+xcoords <- as.numeric(sapply(strsplit(colnames(testdata), "x"), 
+                             "[[", 1))
+ycoords <- as.numeric(sapply(strsplit(colnames(testdata), "x"), 
+                             "[[", 2))
 
 for (j in 1:(ncol(testdata) - 1)){
   rj <- c(xcoords[j], ycoords[j])
@@ -135,7 +140,7 @@ equal_no_spots<-unique(equal_no_spots)
 #  these distances (in the same bins as the random distributions)
 #  and the mean distance are calculated, the L1 norm is calculated 
 #  (L1_norm_real), and the p-value is calculated as 
-#  p=(no random samples with L1>L1(true sample))/(total no random 
+#  p=(no random samples with L1>=L1(true sample))/(total no random 
 #  samples). If the numerator is equal to 0, it can however only
 #  be said that p<1/n. These cases are currently saved as p=1/(10n).
 #  In the supplementary material to the paper by Rodriques et al. 
@@ -199,7 +204,7 @@ for (i in 1:nrow(equal_no_spots)){
     abs_diff_real <- abs(diff_real)
     L1_norm_real <- sum(abs_diff_real)
     
-    over_L1 <- L1_norms_rand[which(L1_norms_rand>L1_norm_real)]
+    over_L1 <- L1_norms_rand[which(L1_norms_rand>=L1_norm_real)]
     
     # Calculation of p values.
     if (length(over_L1)!=0){
@@ -214,12 +219,14 @@ diff_expr <- rownames(testdata[which(p<0.005),])
 print(Sys.time() - start_time)
 
 
+hist(non_zero[diff_expr,1], 0:(max(non_zero[diff_expr,1])+1))
+sum((non_zero[diff_expr,1]==603))
 # --------------------------------------------------------------------
 # Quick plotting, as a test
 # --------------------------------------------------------------------
 library(ggplot2)
 
-gene <- "2010300C02Rik"
+gene <- "Kat2b"
 col <- as.numeric(as.vector(testdata[which(rownames(testdata)==gene),]))
 # Create a colour gradient
 rbPal <- colorRampPalette(c('yellow','red'))
