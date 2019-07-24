@@ -219,8 +219,6 @@ diff_expr <- rownames(testdata[which(p<0.005),])
 print(Sys.time() - start_time)
 
 
-hist(non_zero[diff_expr,1], 0:(max(non_zero[diff_expr,1])+1))
-sum((non_zero[diff_expr,1]==603))
 # --------------------------------------------------------------------
 # Quick plotting, as a test
 # --------------------------------------------------------------------
