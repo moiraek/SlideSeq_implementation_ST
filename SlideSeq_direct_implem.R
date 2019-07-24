@@ -54,9 +54,8 @@ distrib <- function(spot_coords){
     len <- len + val
   }
   euk <- vector(mode="numeric", length=len)
-  coords <- GetCoords(spot_coords, delim="x")
-  xcoords <- coords$x
-  ycoords <- coords$y
+  xcoords <- as.numeric(sapply(strsplit(colnames(spot_coords), "x"), "[[", 1))
+  ycoords <- as.numeric(sapply(strsplit(colnames(spot_coords), "x"), "[[", 2))
   count <- 1
   for (j in 1:(length(spot_coords)-1)){
     rj <- c(xcoords[j], ycoords[j])
