@@ -35,7 +35,7 @@ data <- as.data.frame(t(read.table("Rep1_MOB_count_matrix-1.tsv", check.names=FA
 
 # Remove genes with expression in less than 10 spots, and spots with
 #  expression of less than 200 genes.
-testdata <- data[rowSums(data!=0)>9,]
+testdata <- data[rowSums(data!=0)>4,]
 testdata <- testdata[,colSums(testdata!=0)>199]
 
 #--------------------------------------------------------------------
@@ -218,6 +218,12 @@ for (i in 1:nrow(equal_no_spots)){
 diff_expr <- rownames(testdata[which(p<0.005),])
 print(Sys.time() - start_time)
 
+
+
+all_genes <- hist(non_zero[,1], 0:(max(non_zero[,1])+1), ylim=c(0,300))$counts
+diff_genes <-hist(non_zero[diff_expr,1], 0:(max(non_zero[,1])+1), ylim=c(0,300))$counts
+diff <- all_genes-diff_genes
+barplot(diff)
 
 # --------------------------------------------------------------------
 # Quick plotting, as a test

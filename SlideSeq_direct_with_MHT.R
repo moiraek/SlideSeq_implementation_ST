@@ -3,7 +3,7 @@
 #
 # Moira Ek
 # 2019 07 24
-# Implementation of the SlideSeq DGE method. The general idea 
+# Direct implementation of the SlideSeq DGE method. The general idea 
 #  is to, for each gene, first calculate the distribution of distances
 #  between the spots in which it is expressed. In the paper by 
 #  Rodriques et al. (Science 363, 1463–1467, 2019. 
@@ -31,18 +31,7 @@
 #     Benjamini-Yekutieli procedure can be applied (code included),
 #     but with 1000 random samples all obtained p-values are too large
 #     for this to work...
-# 4. Attempt to introduce weighting according to the expression level
-#     of the gene in question, in order to step away from the binary
-#     approach employed in the original SlideSeq method. In order to
-#     get a representative background, the idea is to sample the same
-#     number of spots (with replacement) as the total number of 
-#     transcripts of a specific gene, instead of the number of spots
-#     where there is any transcription at all.
-# --> This doesn't seem to work very well, since it seems to be a
-#     general feature of the method that the more spots are to be 
-#     sampled, the more (presumably false) positives will be obtained.
-# --> Attempt 2: Try to use log10(counts) rather than raw counts.
-# --> The same problem, could it be due to the replacement?
+# 
 #-----------------------------------------------------------------------
 
 setwd("/home/moiraek/summerp19/SlideSeq_etc/Till_git")
@@ -50,9 +39,9 @@ setwd("/home/moiraek/summerp19/SlideSeq_etc/Till_git")
 data <- as.data.frame(t(read.table("Rep1_MOB_count_matrix-1.tsv", check.names=FALSE)))
 #data <- as.data.frame(read.table("hippocampus_wt_rep1.tsv", check.names=FALSE))
 
-# Remove genes with expression in less than 5 spots, and spots with
+# Remove genes with expression in less than 10 spots, and spots with
 #  expression of less than 200 genes.
-testdata <- data[rowSums(data!=0)>4,]
+testdata <- data[rowSums(data!=0)>9,]
 testdata <- testdata[,colSums(testdata!=0)>199]
 
 #--------------------------------------------------------------------
@@ -81,6 +70,7 @@ for (j in 1:(ncol(testdata) - 1)){
   }
 }
 
+
 #--------------------------------------------------------------------
 # Calcuate the probability of sampling the spots. (Proportional to 
 #  the total number of transcripts in each spot.) Indices are
@@ -96,17 +86,6 @@ for (val in 1:length(P)){
 }
 indices <- 1:length(P)
 
-#--------------------------------------------------------------------
-# For all non-zero elements, take log10 of the data+pseudocount of 10,
-#  and round up to the nearest integer value. (Values of 1 are set to 
-#  0, since ceiling() ensures that all non-zero counts will give 
-#  values of at least 2.)
-# NB - try log2? Almost all values are now 2...
-#--------------------------------------------------------------------
-
-pseudocount <- 10
-testdata <- ceiling(log10(testdata+pseudocount))
-testdata[testdata==1] <- 0
 
 #--------------------------------------------------------------------
 # Grouping of the genes according to the number of spots in which 
@@ -123,33 +102,32 @@ breaks <- seq(0,maxdist+0.5, by=0.5)
 
 # n = the number of random samples to draw for each gene.
 # p = dataframe for the p-values.
-# non_zero = the number of transcripts per gene, i.e. the number
-#  of spots to be included in each random sample.
+# non_zero = the number of spots with non-zero expression of each gene.
 n <- 1000
 p <- vector(mode="numeric", length=nrow(testdata))
 p <- as.data.frame(p, row.names=rownames(testdata), 
                    col.names="p")
 
-non_zero <- matrix(0,nrow=nrow(testdata), ncol=1)
-non_zero[,1] <- as.numeric(rowSums(testdata))
+non_zero <- matrix(nrow=nrow(testdata),ncol=1)
 rownames(non_zero)<-rownames(testdata)
-
-#--------------------------------------------------------------------
-# Group the genes with the same number of transcripts on the rows of
-#  equal_no_transcr. The name of each row is the number of transcripts.
-#  unique --> each group of genes is only included once.
-#--------------------------------------------------------------------
-
-equal_no_transcr <- matrix(NA,nrow=length(non_zero),
-                           ncol=length(non_zero))
-
-for (j in 1:(length(non_zero))){
-  equal<-rownames(testdata)[which(non_zero==non_zero[j])]
-  equal_no_transcr[j,1:length(equal)] <- equal
+for (i in 1:nrow(non_zero)){
+  non_zero[i,1] <- ncol(testdata[i, which(testdata[i,]!=0)])
 }
-rownames(equal_no_transcr) <- as.character(non_zero)
 
-equal_no_transcr <- unique(equal_no_transcr)
+# Group the genes expressed in the same number of spots on the rows of
+#  equal_no_spots, each row is given the number of spots as its name.
+#  unique --> each group of genes is only included once.
+equal_no_spots <- matrix(NA,nrow=length(non_zero),
+                         ncol=length(non_zero))
+rownames(equal_no_spots)<-rownames(testdata)
+for (j in 1:(nrow(non_zero))){
+  equal<-rownames(non_zero)[which(non_zero==non_zero[j,1])]
+  equal_no_spots[j,1:length(equal)] <- equal
+}
+rownames(equal_no_spots)<-as.character(non_zero[,1])
+
+equal_no_spots<-unique(equal_no_spots)
+
 
 #--------------------------------------------------------------------
 # Go through the groups one by one. For each group the same number 
@@ -168,40 +146,39 @@ equal_no_transcr <- unique(equal_no_transcr)
 #  these distances (in the same bins as the random distributions)
 #  and the mean distance are calculated, the L1 norm is calculated 
 #  (L1_norm_real), and the p-value is calculated as 
-#  p=(no random samples with L1>L1(true sample))/(total no random 
+#  p=(no random samples with L1>=L1(true sample))/(total no random 
 #  samples). If the numerator is equal to 0, it can however only
 #  be said that p<1/n. These cases are currently saved as p=1/(10n).
 #  In the supplementary material to the paper by Rodriques et al. 
+#  (Science 363, 1463–1467, 2019. doi 10.1126/science.aaw1219)
 #  it is stated that p=(no random samples with L1<L1(true sample))/
 #  (total no random samples), but this contradicts their 
 #  argumentation, as well as the example in figure S10.
 #--------------------------------------------------------------------
 
-
-for (i in 1:nrow(equal_no_transcr)){
+for (i in 1:nrow(equal_no_spots)){
   # The counts for the genes in question
-  values <- testdata[na.omit(equal_no_transcr[i,]),]
+  values <- testdata[na.omit(equal_no_spots[i,]),]
   
   # The number of distances required
   len <- 0
-  for (l in 1:(as.numeric(rownames(equal_no_transcr)[i])-1)){
+  for (l in 1:(as.numeric(rownames(equal_no_spots)[i])-1)){
     len <- len + l
   }
   
   # The random distributions
   eukl_for_rand <- vector(mode="numeric", length=len)
   
-  n_random <- as.numeric(rownames(equal_no_transcr)[i])
+  n_random <- as.numeric(rownames(equal_no_spots)[i])
   counts_matrix_rand <- matrix(0, nrow = n, ncol = (length(breaks)-1))
   for (k in 1:n){
     random_indices <- sort(sample(indices, size=n_random, 
-                                  replace=TRUE, prob=P))
+                                  replace=FALSE, prob=P))
     interm_eukl <- euk[random_indices,random_indices]
     eukl_for_rand <- interm_eukl[lower.tri(interm_eukl, diag=FALSE)]
     counts_matrix_rand[k,] <- hist(eukl_for_rand, breaks, 
                                    plot=FALSE)$counts
   }
-  
   
   mean_counts <- colMeans(counts_matrix_rand)
   
@@ -216,24 +193,15 @@ for (i in 1:nrow(equal_no_transcr)){
   abs_diff_rand <- abs(diff_matr_rand)
   L1_norms_rand <- rowSums(abs_diff_rand)
   
-  # The true distributions:
-  eukl <- vector(mode="numeric", length=len)
   
-
+  # The true distributions.
+  eukl <- vector(mode="numeric", length=len)
+  vals <- vector(mode="numeric", 
+                 length=as.numeric(rownames(equal_no_spots)[i]) )
+ 
   for (j in 1:nrow(values)){
-    vals <- vector(mode="numeric", 
-                   length=length(which(values[j,]!=0)))
     vals <- which(values[j,]!=0)
-    for (m in vals){
-      if (m==1){
-        vals_weighted <- rep(m, times=values[j,m])
-      } else{
-        vals_weighted <- append(vals_weighted, rep(m, times=values[j,m]), 
-                                after=length(vals_weighted))
-      }
-      
-    }
-    eukli <- euk[vals_weighted,vals_weighted]
+    eukli <- euk[vals,vals]
     eukl <- eukli[lower.tri(eukli, diag=FALSE)]
     
     eukdistr <- hist(eukl, breaks, plot=FALSE)
@@ -244,7 +212,7 @@ for (i in 1:nrow(equal_no_transcr)){
     
     over_L1 <- L1_norms_rand[which(L1_norms_rand>=L1_norm_real)]
     
-    # Calculation of p values
+    # Calculation of p values.
     if (length(over_L1)!=0){
       p[rownames(values)[j],1] <- length(over_L1)/n
     } else {
@@ -255,17 +223,16 @@ for (i in 1:nrow(equal_no_transcr)){
 
 # In the paper by Rodriques et al. p-values of less than 0.005 were
 #  deemed significant.
-diff_expr_orig <- rownames(testdata[which(p<0.005),])
+diff_expr <- rownames(testdata[which(p<0.005),])
 
-# Alternatively, the Benjamini-Hochberg procedure can be used to
-#  control the FDR. However, according to Benjamini and Yekutieli
-#  (Annals of Statistics, 29(4), 1165-1188, 2001) this is only 
-#  applicable if the tests are independent or are positively
-#  dependent. Not entirely sure of the case here... If this is not
-#  the case, the Benjamini-Yekutieli procedure can be used, by
-#  including a coefficient, but due to the limited range of observable
-#  p-values here, this doesn't work, (unless n is increased or 
-#  q decreased?).
+#Alternatively, the Benjamini-Hochberg procedure can be used to
+# control the FDR. However, according to Benjamini and Yekutieli
+# (Annals of Statistics, 29(4), 1165-1188, 2001) this is only 
+# applicable if the tests are independent or are positively
+# dependent. Not entirely sure of the case here... If this is not
+# the case, the Benjamini-Yekutieli procedure can be used, by
+# including a coefficient, but due to the limited range of observable
+# p-values here, this doesn't work.
 
 p2 <- p[order(p$p), , drop = FALSE]
 count <- nrow(p2)
@@ -304,8 +271,8 @@ if (k==-Inf){
 } else{
   diff_expr_MHT <- rownames(p2)[1:k]
 }
-print(Sys.time() - start_time)
 
+print(Sys.time() - start_time)
 
 # --------------------------------------------------------------------
 # Quick plotting, as a test
