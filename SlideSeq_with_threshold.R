@@ -39,6 +39,7 @@
 
 setwd("/home/moiraek/summerp19/SlideSeq_etc/Till_git")
 
+#data <- as.data.frame(t(read.table("S1_stdata.tsv", check.names=FALSE)))
 data <- as.data.frame(t(read.table("Rep1_MOB_count_matrix-1.tsv", check.names=FALSE)))
 #data <- as.data.frame(read.table("hippocampus_wt_rep1.tsv", check.names=FALSE))
 
@@ -313,7 +314,7 @@ plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
      ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5,
      xaxt="n", yaxt="n", bty="n", col.main="black")
  
- for (gene in diff_expr_MHT_thr[20,]){
+for (gene in diff_expr_MHT_thr[20,251:300]){
     col <- as.numeric(as.vector(data[which(rownames(data)==gene),]))
     # Create a colour gradient
     rbPal <- colorRampPalette(c('yellow','red'))
