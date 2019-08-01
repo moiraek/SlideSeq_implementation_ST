@@ -44,8 +44,8 @@ testdata <- data[rowSums(data!=0)>9,]
 testdata <- testdata[,colSums(testdata!=0)>199]
 
 # Normalize the counts by total number of transcripts at each spot
-#spotwise_tot <- colSums(testdata)
-#testdata <- t(apply(testdata, 1, '/', spotwise_tot))
+spotwise_tot <- colSums(testdata)
+testdata <- t(apply(testdata, 1, '/', spotwise_tot))
 
 # Normalize the counts using SCTransform
 # library(Seurat)
@@ -57,9 +57,9 @@ testdata <- testdata[,colSums(testdata!=0)>199]
 # 
 # testdata <- testdat
 # 
-# pseudocount <- 10
-# testdata <- ceiling(log10(testdata+pseudocount))
-# testdata[testdata==1] <- 0
+#pseudocount <- 10
+#testdata <- ceiling(log10(testdata+pseudocount))
+#testdata[testdata==1] <- 0
 
 #--------------------------------------------------------------------
 # Create a distance matrix
@@ -67,7 +67,7 @@ testdata <- testdata[,colSums(testdata!=0)>199]
 
 start_time <- Sys.time()
 
-oversampling_factor <- 1
+#oversampling_factor <- 1/6
 spotnames <- colnames(testdata)
 euk <- matrix(0, ncol=ncol(testdata), nrow=ncol(testdata))
 rownames(euk) <- spotnames
@@ -88,6 +88,16 @@ for (j in 1:(ncol(testdata) - 1)){
   }
 }
 
+# Calculate the maximum distance between included spots, in order
+#  to define appropriate breakpoints for hist(). 0.5 due to the 
+#  actual distances in the ST array.
+maxdist <- max(euk)
+breaks <- seq(0,maxdist+0.5, by=0.5)
+
+# Capping of distances, so that single spots far away won't have too
+#  great an impact
+#cap <- maxdist*0.8
+#euk[euk>cap]<-cap
 
 #--------------------------------------------------------------------
 # Calcuate the probability of sampling the spots. (Proportional to 
@@ -109,13 +119,6 @@ for (val in 1:length(P)){
 }
 #P_s <- 1/ncol(testdata) 
 indices <- 1:ncol(testdata)
-
-
-# Calculate the maximum distance between included spots, in order
-#  to define appropriate breakpoints for hist(). 0.5 due to the 
-#  actual distances in the ST array.
-maxdist <- max(euk)
-breaks <- seq(0,maxdist+0.5, by=0.5)
 
 
 # n = the number of random samples to draw for the background 
@@ -181,7 +184,10 @@ for (i in 1:nrow(equal_no_spots)){
   
   # The number of spots required, e.g. 3x the number of spots in
   #  which these genes are expressed
-  n_spots <- as.numeric(rownames(equal_no_spots)[i])*oversampling_factor
+  # NB - Är round lämpligt? Eller ceil eller floor?
+  n_expressed <- as.numeric(rownames(equal_no_spots)[i])
+  n_oversampling <- round(oversampling_factor*n_expressed)
+  n_spots <- n_expressed + n_oversampling
   
   # The number of distances required
   len <- 0
@@ -234,8 +240,10 @@ for (i in 1:nrow(equal_no_spots)){
     P_cond <- P_g_s*P_s/P_g
     
     
-    gene_indices <- sort(sample(indices, size=n_spots, 
-                                  replace=TRUE, prob=P_cond))
+    expressed_indices <- which(vals!=0)
+    oversampling_indices <- sample(indices, size=n_oversampling, 
+                                   replace=TRUE, prob=P_cond)
+    gene_indices <- sort(c(expressed_indices,oversampling_indices))
     eukli <- euk[gene_indices,gene_indices]
     eukl <- eukli[lower.tri(eukli, diag=FALSE)]
     eukdistr <- hist(eukl, breaks, plot=FALSE)
@@ -315,7 +323,7 @@ print(Sys.time() - start_time)
 library(ggplot2)
 
 gene <- "2010300C02Rik"
-col <- as.numeric(as.vector(testdata[which(rownames(testdata)==gene),]))
+col <- as.numeric(as.vector(data[which(rownames(data)==gene),]))
 # Create a colour gradient
 rbPal <- colorRampPalette(c('yellow','red'))
 color_vector <- rbPal(10)[as.numeric(cut(col,breaks = 10))]
@@ -327,3 +335,20 @@ ycoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 2))
 plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
      ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5, 
      xaxt="n", yaxt="n", bty="n", col.main="black")
+
+for (gene in diff_expr_MHT_cap[1:50]){
+  col <- as.numeric(as.vector(data[which(rownames(data)==gene),]))
+  # Create a colour gradient
+  rbPal <- colorRampPalette(c('yellow','red'))
+  color_vector <- rbPal(10)[as.numeric(cut(col,breaks = 10))]
+  
+  xcoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 1))
+  ycoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 2))
+  
+  # Plot the spot array with colours according to the gradient.
+  dev.new()
+  plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=5, asp=1,
+       ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5,
+       xaxt="n", yaxt="n", bty="n", col.main="black")
+}
+
