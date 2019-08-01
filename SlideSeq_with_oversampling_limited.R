@@ -34,6 +34,8 @@
 # Med bas-inklusion, olika oversampling för varje gen --> kan inte
 #  gruppera dem... NB - bör man inte egentligen göra på motsvarande
 #  vis för bakgrunden?
+
+# Testa såhär med cap vid 0.9*max - kör på måndag
 #-----------------------------------------------------------------------
 
 setwd("/home/moiraek/summerp19/SlideSeq_etc/Till_git")
@@ -97,8 +99,8 @@ breaks <- seq(0,maxdist+0.5, by=0.5)
 
 # Capping of distances, so that single spots far away won't have too
 #  great an impact
-#cap <- maxdist*0.8
-#euk[euk>cap]<-cap
+cap <- maxdist*0.9
+euk[euk>cap]<-cap
 
 #--------------------------------------------------------------------
 # Calcuate the probability of sampling the spots. (Proportional to 
@@ -362,9 +364,10 @@ plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
      ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5, 
      xaxt="n", yaxt="n", bty="n", col.main="black")
 
-for (gene in diff_expr_MHT[51:100]){
+for (gene in intersect(genes_ind_scaling_cap, genes_ind_scaling_no_cap)[1:50]){
   dat <- data[which(rownames(data)==gene),]
   dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
+  
   col <- as.numeric(as.vector(dat))
   # Create a colour gradient
   rbPal <- colorRampPalette(c('yellow','red'))
