@@ -133,7 +133,7 @@ factor_seur <- vector(mode='numeric', length=nrow(testdata))
 for (i in 1:nrow(testdata)){
   factor_seur[i] <- median(testdata[i,testdata[i,]!=0])
 }
-scale_factor <- quantile(factor_seur, 0.98)
+scale_factor <- quantile(factor_seur, 0.992)
 factor_seur <- factor_seur/scale_factor
 
 
@@ -364,7 +364,7 @@ plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
      ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5, 
      xaxt="n", yaxt="n", bty="n", col.main="black")
 
-for (gene in diff_expr_MHT[301:350]){
+for (gene in genes_ind_scaling_no_cap_0.985[101:150]){
   dat <- data[which(rownames(data)==gene),]
   dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
   
