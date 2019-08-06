@@ -133,7 +133,7 @@ factor_seur <- vector(mode='numeric', length=nrow(testdata))
 for (i in 1:nrow(testdata)){
   factor_seur[i] <- median(testdata[i,testdata[i,]!=0])
 }
-scale_factor <- quantile(factor_seur, 0.992)
+scale_factor <- quantile(factor_seur, 0.99)
 factor_seur <- factor_seur/scale_factor
 
 
