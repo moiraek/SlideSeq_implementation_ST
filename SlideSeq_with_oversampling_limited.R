@@ -5,37 +5,29 @@
 #
 # Adaptation of the SlideSeq DGE method described by by Rodriques et 
 #  al. (Science 363, 1463–1467, 2019. doi 10.1126/science.aaw1219) to
-#  ST data. For each gene, a set number of spots (greater than the 
-#  actual number of spots in which expression of the gene in question
-#  is observed) is sampled from the total set of spots. For gene i, 
-#  the probability of sampling spot j is the conditional probability
-#  P(spot(j)|gene(i)), given by Baye's theorem.
-#  The obtained set of spots is used to calculate a distribution of 
-#  pairwise distances. As a background, the same number of spots is
+#  ST data. For each gene, each spot with expression is included once, 
+#  and in addition, a number of spots (depending on the expression level
+#  of the gene in question, but in most cases smaller than the number
+#  of spots in which expression is observed) is sampled from the total
+#  set of spots. For gene i, the probability of sampling spot j is the 
+#  conditional probability P(spot(j)|gene(i)), given by Baye's theorem.
+#  The obtained total set of spots is used to calculate a distribution 
+#  of pairwise distances. As a background, the same number of spots is
 #  sampled from the total set of spots, with probabilities given 
 #  by the total number of transcripts in each spot divided by the 
-#  total number of transcripts in all spots. n (1000 in the paper by 
-#  Rodriques et al.) such sets are obtained, their distance 
-#  distributions are calculated, and the mean of these distributions 
-#  is taken. Thedistribution obtained for the gene under study is 
-#  compared to this, and L1 norms are obtained and compared as in the 
-#  original method, see e.g. SlideSeq_direct_with_MHT.R for a 
-#  description.
-# In principle the same 1000 background distributions should be usable
-#  for all genes in this case (thus, n could possibly be increased 
-#  without any too great consequences for the computational time).
+#  total number of transcripts in all spots (As of now: with 
+#  replacement. Should we first without replacement sample the same
+#  number of spots as where the gene is expressed, and then the 
+#  additional number with replacement? Would be more correct, but
+#  take much more time as the genes will barely be allowed to be 
+#  grouped anymore... How big an impact would it have?). 
+#  n (1000 in the paper by Rodriques et al.) such sets are obtained,
+#  their distance distributions are calculated, and the mean of these
+#  distributions is taken. The distribution obtained for the gene 
+#  under study is compared to this, and L1 norms are obtained and 
+#  compared as in the original method, see e.g. SlideSeq_direct_with_MHT.R 
+#  for a description.
 #
-# Should multiple distributions be sampled for each gene?
-# Can we still calculate the p values in the same way?
-# What number of spots is reasonable to sample? Should depend on the 
-#  total no. spots, but how? If the same number is used for all spots,
-#  the pattern may be "increased" more for genes expressed in few 
-#  spots... Try a 3x oversampling, t.ex. 
-# Med bas-inklusion, olika oversampling för varje gen --> kan inte
-#  gruppera dem... NB - bör man inte egentligen göra på motsvarande
-#  vis för bakgrunden?
-
-# Testa såhär med cap vid 0.9*max - kör på måndag. 5/8: cap förkastas.
 #-----------------------------------------------------------------------
 
 setwd("/home/moiraek/summerp19/SlideSeq_etc/Till_git")
@@ -48,10 +40,6 @@ data <- as.data.frame(t(read.table("Rep1_MOB_count_matrix-1.tsv",
 testdata <- data[rowSums(data!=0)>9,]
 testdata <- testdata[,colSums(testdata!=0)>199]
 
-# Normalize the counts by total number of transcripts at each spot
-#spotwise_tot <- colSums(testdata)
-#testdata <- t(apply(testdata, 1, '/', spotwise_tot))
-
 # Normalize the counts using SCTransform
 library(Seurat)
 se <- CreateSeuratObject(testdata)
@@ -60,17 +48,12 @@ testdat <- GetAssayData(se, slot="counts", assay="SCT")
 testdat <- as.matrix(testdat)
 testdata <- testdat
 
-#pseudocount <- 10
-#testdata <- ceiling(log10(testdata+pseudocount))
-#testdata[testdata==1] <- 0
-
 #--------------------------------------------------------------------
 # Create a distance matrix
 #--------------------------------------------------------------------
 
 start_time <- Sys.time()
 
-#oversampling_factor <- 1/5
 spotnames <- colnames(testdata)
 euk <- matrix(0, ncol=ncol(testdata), nrow=ncol(testdata))
 rownames(euk) <- spotnames
@@ -107,10 +90,6 @@ breaks <- seq(0,maxdist+0.5, by=0.5)
 #  the total number of transcripts in each spot.) Indices are
 #  calculated since the actual output from the sampling will be 
 #  the index a specific spot has in the distance matrix. 
-
-# When normalizing: tot_spot should sum to 1, for each spot. The
-#  probability of sampling each spot is equal, so no P calculation
-#  needed for the background.
 #--------------------------------------------------------------------
 
 
@@ -120,7 +99,7 @@ P <- vector(mode="numeric", length=ncol(testdata))
 for (val in 1:length(P)){
   P[val] <- tot_spot[val]/tot
 }
-#P_s <- 1/ncol(testdata) 
+
 indices <- 1:ncol(testdata)
 
 
@@ -152,6 +131,7 @@ for (i in 1:nrow(non_zero)){
   non_zero[i,1] <- length(testdata[i, which(testdata[i,]!=0)])
 }
 
+# N.B.- Is this appropriate? or ceil or floor?
 non_zero_with_oversampl <- round(non_zero*(1+factor_seur))
 
 # Group the genes expressed in the same number of spots on the rows of
@@ -173,16 +153,19 @@ equal_no_spots<-unique(equal_no_spots)
 #--------------------------------------------------------------------
 # Go through the groups one by one. For each group the same number 
 #  of indices as spots where these genes are expressed are first 
-#  sampled. For each random sample, the counts in each bin, defined 
-#  above, are saved as the rows of counts_matrix_rand, and this is
-#  repeated n times (here, n=1000), until the matrix has been filled.
+#  sampled. (In this case, with replacement.) For each random sample,
+#  the counts in each bin, defined above, are saved as the rows of 
+#  counts_matrix_rand, and this is repeated n times (here, n=1000), 
+#  until the matrix has been filled.
 #  Column-wise means of this matrix gives the mean distribution,
 #  mean_counts. The differences between each individual random 
 #  distribution and the mean distribution are saved in diff_matr_rand.
 #  The L1 norms of these differences are saved in L1_norms_rand.
 #  The genes are then taken one by one. First, the indices of the
 #  non-zero elements are obtained, i.e. the spots where the gene in
-#  question is expressed. This is used to obtain the distances, which
+#  question is expressed. Then, an additional number of spots is 
+#  sampled, based on the conditional probabilities, in the form of
+#  indices. These are then used to obtain the distances, which
 #  are saved in eukl. The difference between the distribution of 
 #  these distances (in the same bins as the random distributions)
 #  and the mean distance are calculated, the L1 norm is calculated 
@@ -207,7 +190,6 @@ for (i in 1:nrow(equal_no_spots)){
   }
   
   # The number of spots required.
-  # NB - Är round lämpligt? Eller ceil eller floor?
   n_spots <- as.numeric(rownames(equal_no_spots)[i])
 
   # The number of distances required
@@ -364,7 +346,9 @@ plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
      ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5, 
      xaxt="n", yaxt="n", bty="n", col.main="black")
 
-for (gene in genes_ind_scaling_no_cap_0.985[101:150]){
+par(mfrow=c(4,4))
+par(mar=c(1,1,1,1))
+for (gene in genes_ind_scaling_no_cap[1:16]){
   dat <- data[which(rownames(data)==gene),]
   dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
   
@@ -377,8 +361,8 @@ for (gene in genes_ind_scaling_no_cap_0.985[101:150]){
   ycoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 2))
   
   # Plot the spot array with colours according to the gradient.
-  dev.new()
-  plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=5, asp=1,
+  #dev.new()
+  plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=2, asp=1,
        ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5,
        xaxt="n", yaxt="n", bty="n", col.main="black")
 }
