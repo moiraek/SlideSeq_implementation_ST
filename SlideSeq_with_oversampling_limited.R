@@ -27,13 +27,24 @@
 #  under study is compared to this, and L1 norms are obtained and 
 #  compared as in the original method, see e.g. SlideSeq_direct_with_MHT.R 
 #  for a description.
+
+
+# N.B. - Bakgrunden samplas nu helt och hållet med återläggning för att
+#  kunna gruppera generna (--> beroende på antalet spots kan t.ex. ca
+#  800 bakgrundsfördelningsset dras istället för drygt 13 000, vid ca 
+#  600 spots). Efter normaliseringen skiljer sig inte spotsen så mycket 
+#  åt i totalt antal transkript, så det är möjligt att detta inte har
+#  någon nämnbar effekt. Då ex har tillgång till severn: testa båda 
+#  varianter och jämför, för att se om detta är motiverat.
 #
 #-----------------------------------------------------------------------
 
 setwd("/home/moiraek/summerp19/SlideSeq_etc/Till_git")
 
-data <- as.data.frame(t(read.table("Rep1_MOB_count_matrix-1.tsv", 
-                                   check.names=FALSE)))
+#data <- as.data.frame(t(read.table("Rep1_MOB_count_matrix-1.tsv", 
+#                                   check.names=FALSE)))
+data <- as.data.frame(read.table("hippocampus_wt_rep1.tsv", 
+                                   check.names=FALSE))
 
 # Remove genes with expression in less than 10 spots, and spots with
 #  expression of less than 200 genes.
@@ -321,8 +332,14 @@ diff_expr <- rownames(testdata[which(p<0.005),])
 #   diff_expr_MHT <- rownames(p2)[1:k]
 # }
 
-p_adj <- p.adjust(p[,1], method="BH")
-p_adj <- as.data.frame(p_adj, row.names=rownames(p), 
+
+p2 <- p
+for (val in which(p[,1]==0.0001)){
+  p2[val,1]<-0.001
+}
+
+p_adj <- p.adjust(p2[,1], method="BH")
+p_adj <- as.data.frame(p_adj, row.names=rownames(p2), 
                        col.names="adjusted p")
 diff <- which(p_adj<0.05)
 p_adj_diff <- as.data.frame(p_adj[diff,], row.names=rownames(p_adj)[diff])
@@ -330,46 +347,46 @@ diff_expr_MHT <- rownames(p_adj_diff)
 
 print(Sys.time() - start_time)
 
-# --------------------------------------------------------------------
-# Quick plotting, as a test
-# --------------------------------------------------------------------
-library(ggplot2)
-
-gene <- "Champ1"
-
-dat <- data[which(rownames(data)==gene),]
-dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
-
-col <- as.numeric(as.vector(dat))
-# Create a colour gradient
-rbPal <- colorRampPalette(c('yellow','red'))
-color_vector <- rbPal(10)[as.numeric(cut(col,breaks = 10))]
-
-xcoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 1))
-ycoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 2))
-
-# Plot the spot array with colours according to the gradient.
-plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
-     ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5, 
-     xaxt="n", yaxt="n", bty="n", col.main="black")
-
-par(mfrow=c(5,4))
-par(mar=c(1,1,1,1))
-for (gene in setdiff(genes_ind_scaling_no_cap, genes_ind_no_cap_0995)[1:20]){
-  dat <- data[which(rownames(data)==gene),]
-  dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
-  
-  col <- as.numeric(as.vector(dat))
-  # Create a colour gradient
-  rbPal <- colorRampPalette(c('yellow','red'))
-  color_vector <- rbPal(10)[as.numeric(cut(col,breaks = 10))]
-  
-  xcoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 1))
-  ycoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 2))
-  
-  # Plot the spot array with colours according to the gradient.
-  #dev.new()
-  plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=2, asp=1,
-       ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5,
-       xaxt="n", yaxt="n", bty="n", col.main="black")
-}
+# # --------------------------------------------------------------------
+# # Quick plotting, as a test
+# # --------------------------------------------------------------------
+# library(ggplot2)
+# 
+# gene <- "Champ1"
+# 
+# dat <- data[which(rownames(data)==gene),]
+# dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
+# 
+# col <- as.numeric(as.vector(dat))
+# # Create a colour gradient
+# rbPal <- colorRampPalette(c('yellow','red'))
+# color_vector <- rbPal(10)[as.numeric(cut(col,breaks = 10))]
+# 
+# xcoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 1))
+# ycoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 2))
+# 
+# # Plot the spot array with colours according to the gradient.
+# plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
+#      ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5, 
+#      xaxt="n", yaxt="n", bty="n", col.main="black")
+# 
+# par(mfrow=c(5,4))
+# par(mar=c(1,1,1,1))
+# for (gene in setdiff(genes_ind_scaling_no_cap, genes_ind_no_cap_0995)[1:20]){
+#   dat <- data[which(rownames(data)==gene),]
+#   dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
+#   
+#   col <- as.numeric(as.vector(dat))
+#   # Create a colour gradient
+#   rbPal <- colorRampPalette(c('yellow','red'))
+#   color_vector <- rbPal(10)[as.numeric(cut(col,breaks = 10))]
+#   
+#   xcoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 1))
+#   ycoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 2))
+#   
+#   # Plot the spot array with colours according to the gradient.
+#   #dev.new()
+#   plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=2, asp=1,
+#        ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5,
+#        xaxt="n", yaxt="n", bty="n", col.main="black")
+# }
