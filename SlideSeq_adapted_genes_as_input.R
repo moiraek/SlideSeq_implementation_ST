@@ -49,6 +49,9 @@ gene_vector <- c("Calm2", "Mbp", "Champ1", "Fuk",
                  "Gpm6b", "Fabp7", "Sparcl1", "Elmo2", "Omg", "Pcp4")
 testdata <- testdata[gene_vector,]
 
+par(mfrow=c(5,4))
+par(mar=c(1,1,1,1))
+library(ggplot2)
 #--------------------------------------------------------------------
 # Create a distance matrix
 #--------------------------------------------------------------------
@@ -109,12 +112,14 @@ indices <- 1:ncol(testdata)
 #  and these are scaled in such a way that 99% of the factors 
 #  are less than or equal to 1 (since this is the range where
 #  the method produces the best results).
-factor_seur <- vector(mode='numeric', length=nrow(testdata))
-for (i in 1:nrow(testdata)){
-  factor_seur[i] <- median(testdata[i,testdata[i,]!=0])
+factor_seur <- vector(mode='numeric', length=nrow(testdata_all))
+factor_seur <- as.data.frame(factor_seur, row.names=rownames(testdata_all))
+for (i in 1:nrow(testdata_all)){
+  factor_seur[i,1] <- median(testdata_all[i,testdata_all[i,]!=0])
 }
-scale_factor <- quantile(factor_seur, 0.99)
-factor_seur <- factor_seur/scale_factor
+scale_factor <- quantile(factor_seur[,1], 0.995)
+factor_seur[,1] <- factor_seur[,1]/scale_factor
+factor_seur <- factor_seur[gene_vector,]
 
 
 # n = the number of random samples to draw for the background 
@@ -306,49 +311,50 @@ diff_expr <- rownames(testdata[which(p<0.005),])
 # including a coefficient, but due to the limited range of observable
 # p-values here, this doesn't work.
 
-p2 <- p[order(p$p), , drop = FALSE]
-count <- nrow(p2)
-
-q <- 0.05
-test <- matrix(NA, nrow=nrow(p2),ncol=1)
-rownames(test)<- rownames(p2)
-
-
-# For the cases of which only p<0.001 (saved as p=0.0001) can be said
-#  the procedure is only meaningful if these cases aren't the only
-#  ones that pass the test. Since it is however certain that they
-#  have p-values of less than 0.001, the below will never lead to any
-#  conclusions of null hypothesis rejection if this cannot certainly
-#  be supported.
-for (val in which(p2[,1]==0.0001)){
-  p2[val,1]<-0.001
-}
-
-# B-Y procedure
-#c <- 0
-#for (j in 1:count){
-#  c <- c + 1/j
-#}
-#for (i in 1:count){
-#  test[i,1] <- (p2[i,1]<=((i/(count*c))*q))
-#}
-
-for (i in 1:count){
-  test[i,1] <- (p2[i,1]<=((i/count)*q))
-}
-
-suppressWarnings(k <- max(which(test[,1]==TRUE)))
-if (k==-Inf){
-  print("No null hypotheses can be rejected with certainty")
-} else{
-  diff_expr_MHT <- rownames(p2)[1:k]
-}
+# p2 <- p[order(p$p), , drop = FALSE]
+# count <- nrow(p2)
+# 
+# q <- 0.05
+# test <- matrix(NA, nrow=nrow(p2),ncol=1)
+# rownames(test)<- rownames(p2)
+# 
+# 
+# # For the cases of which only p<0.001 (saved as p=0.0001) can be said
+# #  the procedure is only meaningful if these cases aren't the only
+# #  ones that pass the test. Since it is however certain that they
+# #  have p-values of less than 0.001, the below will never lead to any
+# #  conclusions of null hypothesis rejection if this cannot certainly
+# #  be supported.
+# for (val in which(p2[,1]==0.0001)){
+#   p2[val,1]<-0.001
+# }
+# 
+# # B-Y procedure
+# #c <- 0
+# #for (j in 1:count){
+# #  c <- c + 1/j
+# #}
+# #for (i in 1:count){
+# #  test[i,1] <- (p2[i,1]<=((i/(count*c))*q))
+# #}
+# 
+# for (i in 1:count){
+#   test[i,1] <- (p2[i,1]<=((i/count)*q))
+# }
+# 
+# suppressWarnings(k <- max(which(test[,1]==TRUE)))
+# if (k==-Inf){
+#   print("No null hypotheses can be rejected with certainty")
+# } else{
+#   diff_expr_MHT <- rownames(p2)[1:k]
+# }
 
 # Alternatively, adjusted p values as computed by p.adjust(), according
 #  to Benjamini-Hochberg
 p_adj <- p.adjust(p[,1], method="BH")
 p_adj <- as.data.frame(p_adj, row.names=rownames(p), 
               col.names="adjusted p")
+print(p_adj)
 
 print(Sys.time() - start_time)
 
