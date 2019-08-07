@@ -45,13 +45,14 @@ testdata <- testdat
 testdata_all <- testdata
 
 # Looking only at specified genes
-gene_vector <- c("Calm2", "Mbp", "Champ1", "Fuk",
-                 "Gpm6b", "Fabp7", "Sparcl1", "Elmo2", "Omg", "Pcp4")
+gene_vector <- rownames(testdata_all)[round(runif(10, min=1, max=(nrow(testdata_all))))]
+#gene_vector <- genes_ind_scaling_no_cap[sample(1:length(genes_ind_scaling_no_cap), size=10, replace=FALSE)]
 testdata <- testdata[gene_vector,]
 
 par(mfrow=c(5,4))
 par(mar=c(1,1,1,1))
 library(ggplot2)
+
 #--------------------------------------------------------------------
 # Create a distance matrix
 #--------------------------------------------------------------------
@@ -84,11 +85,6 @@ for (j in 1:(ncol(testdata) - 1)){
 maxdist <- max(euk)
 breaks <- seq(0,maxdist+0.5, by=0.5)
 
-# Capping of distances, so that single spots far away won't have too
-#  great an impact
-#cap <- maxdist*0.9
-#euk[euk>cap]<-cap
-
 #--------------------------------------------------------------------
 # Calcuate the probability of sampling the spots. (Proportional to 
 #  the total number of transcripts in each spot.) Indices are
@@ -117,7 +113,7 @@ factor_seur <- as.data.frame(factor_seur, row.names=rownames(testdata_all))
 for (i in 1:nrow(testdata_all)){
   factor_seur[i,1] <- median(testdata_all[i,testdata_all[i,]!=0])
 }
-scale_factor <- quantile(factor_seur[,1], 0.995)
+scale_factor <- quantile(factor_seur[,1], 0.99)
 factor_seur[,1] <- factor_seur[,1]/scale_factor
 factor_seur <- factor_seur[gene_vector,]
 
@@ -138,23 +134,8 @@ for (i in 1:nrow(non_zero)){
 }
 
 # N.B.- Is this appropriate? or ceil or floor?
-non_zero_with_oversampl <- round(non_zero*(1+factor_seur))
-
-# Group the genes expressed in the same number of spots on the rows of
-#  equal_no_spots, each row is given the number of spots as its name.
-#  unique --> each group of genes is only included once.
-#equal_no_spots <- matrix(NA,nrow=length(non_zero),
-#                        ncol=length(non_zero))
-#rownames(equal_no_spots)<-rownames(testdata)
-#for (j in 1:(nrow(non_zero_with_oversampl))){
-#  equal<-rownames(non_zero_with_oversampl)[which(non_zero_with_oversampl
-#                                                 ==non_zero_with_oversampl[j,1])]
-#  equal_no_spots[j,1:length(equal)] <- equal
-#}
-#rownames(equal_no_spots)<-as.character(non_zero_with_oversampl[,1])
-
-#equal_no_spots<-unique(equal_no_spots)
-
+# Testa floor för att se om et hjälper mot anrikning av låguttryckta
+non_zero_with_oversampl <- floor(non_zero*(1+factor_seur))
 
 #--------------------------------------------------------------------
 # Go through the groups one by one. For each group the same number 
@@ -207,7 +188,6 @@ if (is.null(nrow(testdata))){
   for (l in 1:(n_spots-1)){
     len <- len + l
   }
-  
   
   # The true distributions.
   eukl <- vector(mode="numeric", length=len)
@@ -273,7 +253,7 @@ if (is.null(nrow(testdata))){
     
   over_L1 <- L1_norms_rand[which(L1_norms_rand>=L1_norm_real)]
     
-   # Calculation of p values.
+  # Calculation of p values.
   if (length(over_L1)!=0){
     p[rownames(testdata)[i],1] <- length(over_L1)/n
   } else {
@@ -294,7 +274,7 @@ if (is.null(nrow(testdata))){
        ylab="", xlab="", main=paste(rownames(testdata)[i]), pch=19, cex.main=1.5,
        xaxt="n", yaxt="n", bty="n", col.main="black")
     
-  barplot(diff_real, main=paste(p[rownames(testdata)[i],1]))
+  barplot(diff_real)
   cat(c(i, " out of ", nrow(testdata), " finished\n"))
 }
 
@@ -302,102 +282,20 @@ if (is.null(nrow(testdata))){
 #  deemed significant.
 diff_expr <- rownames(testdata[which(p<0.005),])
 
-#Alternatively, the Benjamini-Hochberg procedure can be used to
-# control the FDR. However, according to Benjamini and Yekutieli
-# (Annals of Statistics, 29(4), 1165-1188, 2001) this is only 
-# applicable if the tests are independent or are positively
-# dependent. Not entirely sure of the case here... If this is not
-# the case, the Benjamini-Yekutieli procedure can be used, by
-# including a coefficient, but due to the limited range of observable
-# p-values here, this doesn't work.
+# Alternatively, adjusted p values as computed by p.adjust(), using 
+#  the Benjamini-Hochberg correction. p-values saved as 1/(10n) are 
+#  first converted to 1/n, as it is better to be slightly too 
+#  conservative in this case.
+p2 <- p
+for (val in which(p[,1]==0.0001)){
+     p2[val,1]<-0.001
+   }
 
-# p2 <- p[order(p$p), , drop = FALSE]
-# count <- nrow(p2)
-# 
-# q <- 0.05
-# test <- matrix(NA, nrow=nrow(p2),ncol=1)
-# rownames(test)<- rownames(p2)
-# 
-# 
-# # For the cases of which only p<0.001 (saved as p=0.0001) can be said
-# #  the procedure is only meaningful if these cases aren't the only
-# #  ones that pass the test. Since it is however certain that they
-# #  have p-values of less than 0.001, the below will never lead to any
-# #  conclusions of null hypothesis rejection if this cannot certainly
-# #  be supported.
-# for (val in which(p2[,1]==0.0001)){
-#   p2[val,1]<-0.001
-# }
-# 
-# # B-Y procedure
-# #c <- 0
-# #for (j in 1:count){
-# #  c <- c + 1/j
-# #}
-# #for (i in 1:count){
-# #  test[i,1] <- (p2[i,1]<=((i/(count*c))*q))
-# #}
-# 
-# for (i in 1:count){
-#   test[i,1] <- (p2[i,1]<=((i/count)*q))
-# }
-# 
-# suppressWarnings(k <- max(which(test[,1]==TRUE)))
-# if (k==-Inf){
-#   print("No null hypotheses can be rejected with certainty")
-# } else{
-#   diff_expr_MHT <- rownames(p2)[1:k]
-# }
-
-# Alternatively, adjusted p values as computed by p.adjust(), according
-#  to Benjamini-Hochberg
-p_adj <- p.adjust(p[,1], method="BH")
+p_adj <- p.adjust(p2[,1], method="BH")
 p_adj <- as.data.frame(p_adj, row.names=rownames(p), 
               col.names="adjusted p")
+
+diff_expr_MHT <- rownames(p_adj)[which(p_adj[,1]<0.05)]
 print(p_adj)
 
 print(Sys.time() - start_time)
-
-# --------------------------------------------------------------------
-# Quick plotting, as a test
-# --------------------------------------------------------------------
-library(ggplot2)
-
-gene <- "Calm2"
-
-dat <- data[which(rownames(data)==gene),]
-dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
-
-col <- as.numeric(as.vector(dat))
-# Create a colour gradient
-rbPal <- colorRampPalette(c('yellow','red'))
-color_vector <- rbPal(10)[as.numeric(cut(col,breaks = 10))]
-
-xcoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 1))
-ycoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 2))
-
-# Plot the spot array with colours according to the gradient.
-plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
-     ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5, 
-     xaxt="n", yaxt="n", bty="n", col.main="black")
-
-par(mfrow=c(5,4))
-par(mar=c(1,1,1,1))
-for (gene in gene_vector){
-  dat <- data[which(rownames(data)==gene),]
-  dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
-  
-  col <- as.numeric(as.vector(dat))
-  # Create a colour gradient
-  rbPal <- colorRampPalette(c('yellow','red'))
-  color_vector <- rbPal(10)[as.numeric(cut(col,breaks = 10))]
-  
-  xcoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 1))
-  ycoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 2))
-  
-  # Plot the spot array with colours according to the gradient.
-  #dev.new()
-  plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=2, asp=1,
-       ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5,
-       xaxt="n", yaxt="n", bty="n", col.main="black")
-}

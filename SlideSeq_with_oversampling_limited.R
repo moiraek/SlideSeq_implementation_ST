@@ -283,43 +283,50 @@ diff_expr <- rownames(testdata[which(p<0.005),])
 # including a coefficient, but due to the limited range of observable
 # p-values here, this doesn't work.
 
-p2 <- p[order(p$p), , drop = FALSE]
-count <- nrow(p2)
+# p2 <- p[order(p$p), , drop = FALSE]
+# count <- nrow(p2)
+# 
+# q <- 0.05
+# test <- matrix(NA, nrow=nrow(p2),ncol=1)
+# rownames(test)<- rownames(p2)
+# 
+# 
+# # For the cases of which only p<0.001 (saved as p=0.0001) can be said
+# #  the procedure is only meaningful if these cases aren't the only
+# #  ones that pass the test. Since it is however certain that they
+# #  have p-values of less than 0.001, the below will never lead to any
+# #  conclusions of null hypothesis rejection if this cannot certainly
+# #  be supported.
+# for (val in which(p2[,1]==0.0001)){
+#   p2[val,1]<-0.001
+# }
+# 
+# # B-Y procedure
+# #c <- 0
+# #for (j in 1:count){
+# #  c <- c + 1/j
+# #}
+# #for (i in 1:count){
+# #  test[i,1] <- (p2[i,1]<=((i/(count*c))*q))
+# #}
+# 
+# for (i in 1:count){
+#   test[i,1] <- (p2[i,1]<=((i/count)*q))
+# }
+# 
+# suppressWarnings(k <- max(which(test[,1]==TRUE)))
+# if (k==-Inf){
+#   print("No null hypotheses can be rejected with certainty")
+# } else{
+#   diff_expr_MHT <- rownames(p2)[1:k]
+# }
 
-q <- 0.05
-test <- matrix(NA, nrow=nrow(p2),ncol=1)
-rownames(test)<- rownames(p2)
-
-
-# For the cases of which only p<0.001 (saved as p=0.0001) can be said
-#  the procedure is only meaningful if these cases aren't the only
-#  ones that pass the test. Since it is however certain that they
-#  have p-values of less than 0.001, the below will never lead to any
-#  conclusions of null hypothesis rejection if this cannot certainly
-#  be supported.
-for (val in which(p2[,1]==0.0001)){
-  p2[val,1]<-0.001
-}
-
-# B-Y procedure
-#c <- 0
-#for (j in 1:count){
-#  c <- c + 1/j
-#}
-#for (i in 1:count){
-#  test[i,1] <- (p2[i,1]<=((i/(count*c))*q))
-#}
-
-for (i in 1:count){
-  test[i,1] <- (p2[i,1]<=((i/count)*q))
-}
-
-suppressWarnings(k <- max(which(test[,1]==TRUE)))
-if (k==-Inf){
-  print("No null hypotheses can be rejected with certainty")
-} else{
-  diff_expr_MHT <- rownames(p2)[1:k]
-}
+p_adj <- p.adjust(p[,1], method="BH")
+p_adj <- as.data.frame(p_adj, row.names=rownames(p), 
+                       col.names="adjusted p")
+diff <- which(p_adj<0.05)
+p_adj_diff <- as.data.frame(p_adj[diff,], row.names=rownames(p_adj)[diff])
+diff_expr_MHT <- rownames(p_adj_diff)
 
 print(Sys.time() - start_time)
 
@@ -346,9 +353,9 @@ plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
      ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5, 
      xaxt="n", yaxt="n", bty="n", col.main="black")
 
-par(mfrow=c(4,4))
+par(mfrow=c(5,4))
 par(mar=c(1,1,1,1))
-for (gene in genes_ind_scaling_no_cap[1:16]){
+for (gene in setdiff(genes_ind_scaling_no_cap, genes_ind_no_cap_0995)[1:20]){
   dat <- data[which(rownames(data)==gene),]
   dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
   
