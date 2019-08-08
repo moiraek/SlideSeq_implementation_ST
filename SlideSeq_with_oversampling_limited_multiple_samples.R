@@ -12,23 +12,25 @@
 #  one sample.
 #
 # N.B. - Är det lämpligt att kombinera slumpproverna från olika prover
-#  ett och ett? Hur hantera gener som filtreras bort i vissa prover,
-#  ej i andra - for-loop, men bör någon typ av varning ges om resultaten
-#  för en gen inte grundar sig på alla prover?
-# Önskad input: vekror med paths till countmatriser för de olika 
+#  ett och ett?
+# Önskad input: vektor med paths till countmatriser för de olika 
 #  proverna. Ut: en lista av SV gener och deras p-värden, och 
 #  optionally även p-värden för alla gener(?)
 # Problem: för att inte behöva spara undan alla fördelningar för alla
 #  slumpfördelningar för alla samples, etc, kan inte generna grupperas,
 #  varje gen måste behandlas för sig. Försök i nästa steg minska
 #  påverkan av detta på tidsåtgången (mycket stor) genom att 
-# parallellisera koden.
+#  parallellisera koden.
 #-----------------------------------------------------------------------
 
 setwd("/home/moiraek/summerp19/SlideSeq_etc/Till_git")
 
 samples <- c("/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep1_MOB_count_matrix-1.tsv",
-          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep2_MOB_count_matrix-1.tsv")
+          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep2_MOB_count_matrix-1.tsv",
+          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep3_MOB_count_matrix-1.tsv",
+          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep4_MOB_count_matrix-1.tsv",
+          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep5_MOB_count_matrix-1.tsv",
+          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep6_MOB_count_matrix-1.tsv")
 
 # Create a list of the data frames, one for each sample
 data <- list()
@@ -232,6 +234,8 @@ for (i in 1:length(all_genes)){
         P_g_s[l] <- as.numeric(values[l])/tot_spot[[sample]][l]
         P_s[l] <- P[[sample]][l]
       }
+      P_cond <- P_g_s*P_s/P_g
+      
       
       n_expressed <- as.numeric(non_zero[[sample]][all_genes[i],1])
       n_oversampling <- n_spots - n_expressed
@@ -310,7 +314,7 @@ for (i in 1:length(all_genes)){
 
 # In the paper by Rodriques et al. p-values of less than 0.005 were
 #  deemed significant.
-diff_expr <- all_genes[which(p<0.005),]
+diff_expr <- all_genes[which(p[,1]<0.005)]
 
 # Calculating adjusted p values in order to correct for multiple
 #  hypothesis testing, using the Benjamini-Hochberg procedure.
@@ -322,13 +326,12 @@ diff_expr <- all_genes[which(p<0.005),]
 # Accepting a FDR of 5%, all genes with an adjusted p value of less 
 #  than 0.05 are said to be spatially variable.
 
-p2 <- p[,1]
 for (val in which(p[,1]==0.0001)){
-  p2[val,1] <- 0.001
+  p[val,1] <- 0.001
 }
 
-p_adj <- p.adjust(p2[,1], method="BH")
-p_adj <- as.data.frame(p_adj, row.names=rownames(p2))
+p_adj <- p.adjust(p[,1], method="BH")
+p_adj <- as.data.frame(p_adj, row.names=rownames(p))
 colnames(p_adj) <- "Adjusted p"
 p_adj$no_samples <- p[,2]
 
