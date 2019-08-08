@@ -227,9 +227,10 @@ for (i in 1:length(all_genes)){
       P_g <- sum(values)/tot[[sample]]
       P_g_s <- vector(mode='numeric', length=length(values))
       P_cond <- vector(mode='numeric', length=length(values))
+      P_s <- vector(mode='numeric', length=length(values))
       for (l in 1:length(values)){
         P_g_s[l] <- as.numeric(values[l])/tot_spot[[sample]][l]
-        P_s <- P[[sample]][l]
+        P_s[l] <- P[[sample]][l]
       }
       
       n_expressed <- as.numeric(non_zero[[sample]][all_genes[i],1])

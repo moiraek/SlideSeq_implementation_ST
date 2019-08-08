@@ -65,7 +65,7 @@ testdata <- testdat
 
 start_time <- Sys.time()
 
-oversampling_factor <- 1/5
+oversampling_factor <- 1.5
 spotnames <- colnames(testdata)
 euk <- matrix(0, ncol=ncol(testdata), nrow=ncol(testdata))
 rownames(euk) <- spotnames
@@ -231,7 +231,7 @@ for (i in 1:nrow(equal_no_spots)){
     P_g <- sum(vals)/tot
     P_g_s <- vector(mode='numeric', length=length(vals))
     P_cond <- vector(mode='numeric', length=length(vals))
-    P-s[l] <- vector(mode='numeric', length=length(vals))
+    P_s <- vector(mode='numeric', length=length(vals))
     for (l in 1:length(vals)){
       P_g_s[l] <- as.numeric(vals[l])/tot_spot[l]
       P_s[l] <- P[l]

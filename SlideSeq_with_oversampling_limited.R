@@ -41,10 +41,10 @@
 
 setwd("/home/moiraek/summerp19/SlideSeq_etc/Till_git")
 
-#data <- as.data.frame(t(read.table("Rep1_MOB_count_matrix-1.tsv", 
-#                                   check.names=FALSE)))
-data <- as.data.frame(read.table("hippocampus_wt_rep1.tsv", 
-                                   check.names=FALSE))
+data <- as.data.frame(t(read.table("Rep1_MOB_count_matrix-1.tsv", 
+                                   check.names=FALSE)))
+#data <- as.data.frame(read.table("hippocampus_wt_rep1.tsv", 
+#                                   check.names=FALSE))
 
 # Remove genes with expression in less than 10 spots, and spots with
 #  expression of less than 200 genes.
@@ -247,9 +247,10 @@ for (i in 1:nrow(equal_no_spots)){
     P_g <- sum(vals)/tot
     P_g_s <- vector(mode='numeric', length=length(vals))
     P_cond <- vector(mode='numeric', length=length(vals))
+    P_s <- vector(mode='numeric', length=length(vals))
     for (l in 1:length(vals)){
       P_g_s[l] <- as.numeric(vals[l])/tot_spot[l]
-      P_s <- P[l]
+      P_s[l] <- P[l]
     }
     P_cond <- P_g_s*P_s/P_g
     
@@ -347,46 +348,46 @@ diff_expr_MHT <- rownames(p_adj_diff)
 
 print(Sys.time() - start_time)
 
-# # --------------------------------------------------------------------
-# # Quick plotting, as a test
-# # --------------------------------------------------------------------
-# library(ggplot2)
-# 
-# gene <- "Champ1"
-# 
-# dat <- data[which(rownames(data)==gene),]
-# dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
-# 
-# col <- as.numeric(as.vector(dat))
-# # Create a colour gradient
-# rbPal <- colorRampPalette(c('yellow','red'))
-# color_vector <- rbPal(10)[as.numeric(cut(col,breaks = 10))]
-# 
-# xcoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 1))
-# ycoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 2))
-# 
-# # Plot the spot array with colours according to the gradient.
-# plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
-#      ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5, 
-#      xaxt="n", yaxt="n", bty="n", col.main="black")
-# 
-# par(mfrow=c(5,4))
-# par(mar=c(1,1,1,1))
-# for (gene in setdiff(genes_ind_scaling_no_cap, genes_ind_no_cap_0995)[1:20]){
-#   dat <- data[which(rownames(data)==gene),]
-#   dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
-#   
-#   col <- as.numeric(as.vector(dat))
-#   # Create a colour gradient
-#   rbPal <- colorRampPalette(c('yellow','red'))
-#   color_vector <- rbPal(10)[as.numeric(cut(col,breaks = 10))]
-#   
-#   xcoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 1))
-#   ycoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 2))
-#   
-#   # Plot the spot array with colours according to the gradient.
-#   #dev.new()
-#   plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=2, asp=1,
-#        ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5,
-#        xaxt="n", yaxt="n", bty="n", col.main="black")
-# }
+# --------------------------------------------------------------------
+# Quick plotting, as a test
+# --------------------------------------------------------------------
+library(ggplot2)
+
+gene <- "Champ1"
+
+dat <- data[which(rownames(data)==gene),]
+dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
+
+col <- as.numeric(as.vector(dat))
+# Create a colour gradient
+rbPal <- colorRampPalette(c('yellow','red'))
+color_vector <- rbPal(10)[as.numeric(cut(col,breaks = 10))]
+
+xcoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 1))
+ycoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 2))
+
+# Plot the spot array with colours according to the gradient.
+plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
+     ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5,
+     xaxt="n", yaxt="n", bty="n", col.main="black")
+
+par(mfrow=c(5,4))
+par(mar=c(1,1,1,1))
+for (gene in diff_expr_MHT[1:20]){
+  dat <- data[which(rownames(data)==gene),]
+  dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
+
+  col <- as.numeric(as.vector(dat))
+  # Create a colour gradient
+  rbPal <- colorRampPalette(c('yellow','red'))
+  color_vector <- rbPal(10)[as.numeric(cut(col,breaks = 10))]
+
+  xcoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 1))
+  ycoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 2))
+
+  # Plot the spot array with colours according to the gradient.
+  #dev.new()
+  plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
+       ylab="", xlab="", main=paste(gene, round(p_adj_diff[gene,1], digits=4)), pch=19, cex.main=1,
+       xaxt="n", yaxt="n", bty="n", col.main="black")
+}
