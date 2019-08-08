@@ -44,19 +44,17 @@ testdata <- data[rowSums(data!=0)>9,]
 testdata <- testdata[,colSums(testdata!=0)>199]
 
 # Normalize the counts by total number of transcripts at each spot
-spotwise_tot <- colSums(testdata)
-testdata <- t(apply(testdata, 1, '/', spotwise_tot))
+#spotwise_tot <- colSums(testdata)
+#testdata <- t(apply(testdata, 1, '/', spotwise_tot))
 
 # Normalize the counts using SCTransform
-# library(Seurat)
-# se <- CreateSeuratObject(testdata)
-# se <- SCTransform(se)
-# testdat <- GetAssayData(se, slot="counts", assay="SCT")
-# 
-# testdat <- as.matrix(testdat)
-# 
-# testdata <- testdat
-# 
+library(Seurat)
+se <- CreateSeuratObject(testdata)
+se <- SCTransform(se)
+testdat <- GetAssayData(se, slot="counts", assay="SCT")
+testdat <- as.matrix(testdat)
+testdata <- testdat
+
 #pseudocount <- 10
 #testdata <- ceiling(log10(testdata+pseudocount))
 #testdata[testdata==1] <- 0
@@ -67,7 +65,7 @@ testdata <- t(apply(testdata, 1, '/', spotwise_tot))
 
 start_time <- Sys.time()
 
-#oversampling_factor <- 1/6
+oversampling_factor <- 1/5
 spotnames <- colnames(testdata)
 euk <- matrix(0, ncol=ncol(testdata), nrow=ncol(testdata))
 rownames(euk) <- spotnames
@@ -336,7 +334,7 @@ plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
      ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5, 
      xaxt="n", yaxt="n", bty="n", col.main="black")
 
-for (gene in diff_expr_MHT_cap[1:50]){
+for (gene in diff_expr_MHT[1:50]){
   col <- as.numeric(as.vector(data[which(rownames(data)==gene),]))
   # Create a colour gradient
   rbPal <- colorRampPalette(c('yellow','red'))

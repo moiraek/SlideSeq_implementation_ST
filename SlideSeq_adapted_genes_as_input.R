@@ -197,9 +197,10 @@ if (is.null(nrow(testdata))){
   P_g <- sum(values)/tot
   P_g_s <- vector(mode='numeric', length=length(values))
   P_cond <- vector(mode='numeric', length=length(values))
+  P_s <- vector(mode='numeric', length=length(values))
   for (l in 1:length(values)){
     P_g_s[l] <- as.numeric(values[l])/tot_spot[l]
-    P_s <- P[l]
+    P_s[l] <- P[l]
   }
   P_cond <- P_g_s*P_s/P_g
     

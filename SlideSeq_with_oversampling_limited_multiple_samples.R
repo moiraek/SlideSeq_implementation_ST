@@ -201,10 +201,10 @@ for (i in 1:length(all_genes)){
       # If the gene is not present in this sample, no distances should
       #  be generated, and the values vector remains a vector of zeroes
       included_samples <- included_samples - 1
-      n_spots <- 0
-      
-      #The number of distances required
-      len <- 0
+      # n_spots <- 0
+      # 
+      # #The number of distances required
+      # len <- 0
     
     } else {
       # The counts for the gene in question, if it is included
@@ -219,64 +219,50 @@ for (i in 1:length(all_genes)){
         len <- len + l
       }
       
-    }
-  
-    # The true distribution
-    eukl <- vector(mode="numeric", length=len)
-    eukli <- matrix(0, ncol=n_spots, nrow=n_spots)
-  
-    # The conditional probabilities for the gene in question
-    P_g <- sum(values)/tot[[sample]]
-    P_g_s <- vector(mode='numeric', length=length(values))
-    P_cond <- vector(mode='numeric', length=length(values))
-    for (l in 1:length(values)){
-      P_g_s[l] <- as.numeric(values[l])/tot_spot[[sample]][l]
-      P_s <- P[[sample]][l]
-    }
-  
-   if (P_g==0){
-      # Vector of zeroes, as to not yield an error message
-      P_cond <- vector(mode="numeric", length=length(values))
-    } else{
-      P_cond <- P_g_s*P_s/P_g
-    }
-    
-    if (identical(which(rownames(testdat)==all_genes[i]), integer(0))){
-      n_expressed <- 0
-      n_oversampling <- 0
-    } else {
+      # The true distribution
+      eukl <- vector(mode="numeric", length=len)
+      eukli <- matrix(0, ncol=n_spots, nrow=n_spots)
+      
+      # The conditional probabilities for the gene in question
+      P_g <- sum(values)/tot[[sample]]
+      P_g_s <- vector(mode='numeric', length=length(values))
+      P_cond <- vector(mode='numeric', length=length(values))
+      for (l in 1:length(values)){
+        P_g_s[l] <- as.numeric(values[l])/tot_spot[[sample]][l]
+        P_s <- P[[sample]][l]
+      }
+      
       n_expressed <- as.numeric(non_zero[[sample]][all_genes[i],1])
       n_oversampling <- n_spots - n_expressed
+      
+      expressed_indices <- which(values!=0)
+      oversampling_indices <- sample(indices[[sample]], size=n_oversampling, 
+                                     replace=TRUE, prob=P_cond)
+      gene_indices <- sort(c(expressed_indices,oversampling_indices))
+      eukli <- euk[[sample]][gene_indices,gene_indices]
+      eukl <- eukli[lower.tri(eukli, diag=FALSE)]
+      eukdistr[[sample]] <- hist(eukl, breaks, plot=FALSE)$counts
+      
+      
+      # The random distributions for each sample, saved in a list
+      eukl_for_rand <- vector(mode="numeric", length=len)
+      
+      counts_matrix_rand[[sample]] <- matrix(0, nrow = n, ncol = (length(breaks)-1))
+      for (k in 1:n){
+        random_indices_1 <- sample(indices[[sample]], size=n_expressed, 
+                                   replace=FALSE, prob=P[[sample]])
+        random_indices_2 <- sample(indices[[sample]], size=n_oversampling, 
+                                   replace=TRUE, prob=P[[sample]])
+        random_indices <- sort(c(random_indices_1,random_indices_2))
+        interm_eukl <- euk[[sample]][random_indices,random_indices]
+        eukl_for_rand <- interm_eukl[lower.tri(interm_eukl, diag=FALSE)]
+        counts_matrix_rand[[sample]][k,] <- hist(eukl_for_rand, breaks, 
+                                                 plot=FALSE)$counts
+      
+      }
+      
     }
-
-    expressed_indices <- which(values!=0)
-    oversampling_indices <- sample(indices[[sample]], size=n_oversampling, 
-                                 replace=TRUE, prob=P_cond)
-    gene_indices <- sort(c(expressed_indices,oversampling_indices))
-    eukli <- euk[[sample]][gene_indices,gene_indices]
-    eukl <- eukli[lower.tri(eukli, diag=FALSE)]
-    eukdistr[[sample]] <- hist(eukl, breaks, plot=FALSE)$counts
-  
-
-    # The random distributions for each sample, saved in a list
-    eukl_for_rand <- vector(mode="numeric", length=len)
-  
-    counts_matrix_rand[[sample]] <- matrix(0, nrow = n, ncol = (length(breaks)-1))
-    for (k in 1:n){
-      random_indices_1 <- sample(indices[[sample]], size=n_expressed, 
-                                 replace=FALSE, prob=P[[sample]])
-      random_indices_2 <- sample(indices[[sample]], size=n_oversampling, 
-                                 replace=TRUE, prob=P[[sample]])
-      random_indices <- sort(c(random_indices_1,random_indices_2))
-      interm_eukl <- euk[[sample]][random_indices,random_indices]
-      eukl_for_rand <- interm_eukl[lower.tri(interm_eukl, diag=FALSE)]
-      counts_matrix_rand[[sample]][k,] <- hist(eukl_for_rand, breaks, 
-                                          plot=FALSE)$counts
-    }
-    # For each gene, the number of samples that were actually included
-    #  in the calculations is given.
     p[all_genes[i],2]<- included_samples
-
   }
   
   
