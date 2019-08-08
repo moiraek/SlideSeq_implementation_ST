@@ -231,9 +231,10 @@ for (i in 1:nrow(equal_no_spots)){
     P_g <- sum(vals)/tot
     P_g_s <- vector(mode='numeric', length=length(vals))
     P_cond <- vector(mode='numeric', length=length(vals))
+    P-s[l] <- vector(mode='numeric', length=length(vals))
     for (l in 1:length(vals)){
       P_g_s[l] <- as.numeric(vals[l])/tot_spot[l]
-      P_s <- P[l]
+      P_s[l] <- P[l]
     }
     P_cond <- P_g_s*P_s/P_g
     
