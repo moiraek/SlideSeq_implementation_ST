@@ -89,7 +89,7 @@ for (j in 1:(ncol(testdata) - 1)){
 #  to define appropriate breakpoints for hist(). 0.5 due to the 
 #  actual distances in the ST array.
 maxdist <- max(euk)
-breaks <- seq(0,maxdist+0.5, by=0.5)
+breaks <- seq(0,maxdist+1, by=1)
 
 # Capping of distances, so that single spots far away won't have too
 #  great an impact

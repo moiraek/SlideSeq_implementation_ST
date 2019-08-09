@@ -27,10 +27,7 @@ setwd("/home/moiraek/summerp19/SlideSeq_etc/Till_git")
 
 samples <- c("/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep1_MOB_count_matrix-1.tsv",
           "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep2_MOB_count_matrix-1.tsv",
-          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep3_MOB_count_matrix-1.tsv",
-          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep4_MOB_count_matrix-1.tsv",
-          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep5_MOB_count_matrix-1.tsv",
-          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep6_MOB_count_matrix-1.tsv")
+          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep3_MOB_count_matrix-1.tsv")
 
 # Create a list of the data frames, one for each sample
 data <- list()
@@ -86,7 +83,7 @@ for (sample in 1:length(testdata)){
 #  actual distances in the ST array.
 maxdist <- sapply(euk, max)
 maxdist <- max(maxdist)
-breaks <- seq(0,maxdist+0.5, by=0.5)
+breaks <- seq(0,maxdist+1, by=1)
 
 #--------------------------------------------------------------------
 # Calcuate the probability of sampling the spots. (Proportional to 
@@ -195,6 +192,9 @@ for (i in 1:length(all_genes)){
   
   eukdistr <- list()
   counts_matrix_rand <- list()
+  
+  # For each gene, keep count of the number of samples that were
+  #  included in the analysis.
   included_samples <- length(testdata)
   for (sample in 1:length(testdata)){
     testdat <- testdata[[sample]]
