@@ -373,7 +373,7 @@ plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
 
 par(mfrow=c(5,4))
 par(mar=c(1,1,1,1))
-for (gene in diff_expr_MHT[1:20]){
+for (gene in diff_expr_MHT[301:320]){
   dat <- data[which(rownames(data)==gene),]
   dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
 
