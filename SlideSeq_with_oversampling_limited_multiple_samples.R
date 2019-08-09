@@ -27,7 +27,16 @@ setwd("/home/moiraek/summerp19/SlideSeq_etc/Till_git")
 
 samples <- c("/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep1_MOB_count_matrix-1.tsv",
           "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep2_MOB_count_matrix-1.tsv",
-          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep3_MOB_count_matrix-1.tsv")
+          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep3_MOB_count_matrix-1.tsv",
+          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep4_MOB_count_matrix-1.tsv",
+          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep5_MOB_count_matrix-1.tsv",
+          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep6_MOB_count_matrix-1.tsv",
+          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep7_MOB_count_matrix-1.tsv",
+          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep8_MOB_count_matrix-1.tsv",
+          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep9_MOB_count_matrix-1.tsv",
+          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep10_MOB_count_matrix-1.tsv",
+          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep11_MOB_count_matrix-1.tsv",
+          "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep12_MOB_count_matrix-1.tsv")
 
 # Create a list of the data frames, one for each sample
 data <- list()
@@ -332,8 +341,13 @@ for (val in which(p[,1]==0.0001)){
 
 p_adj <- p.adjust(p[,1], method="BH")
 p_adj <- as.data.frame(p_adj, row.names=rownames(p))
-colnames(p_adj) <- "Adjusted p"
+colnames(p_adj) <- "p_adj"
 p_adj$no_samples <- p[,2]
+
+# As output, the adjusted p values for each gene and the number of
+#  samples used in the calculation should be given, sorted in order
+#  of ascending adjusted p value.
+p_adj <- p_adj[order(p_adj$p_adj),]
 
 diff <- which(p_adj[,1]<0.05)
 p_adj_diff <- as.data.frame(p_adj[diff,], row.names=rownames(p_adj)[diff])
@@ -346,41 +360,26 @@ print(Sys.time() - start_time)
 # --------------------------------------------------------------------
 library(ggplot2)
 
-gene <- "Champ1"
-
-dat <- data[which(rownames(data)==gene),]
-dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
-
-col <- as.numeric(as.vector(dat))
-# Create a colour gradient
-rbPal <- colorRampPalette(c('yellow','red'))
-color_vector <- rbPal(10)[as.numeric(cut(col,breaks = 10))]
-
-xcoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 1))
-ycoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 2))
-
-# Plot the spot array with colours according to the gradient.
-plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
-     ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5,
-     xaxt="n", yaxt="n", bty="n", col.main="black")
-
-par(mfrow=c(5,4))
+no_genes_inspect <- 4
+par(mfrow=c(no_genes_inspect,length(testdata)))
 par(mar=c(1,1,1,1))
-for (gene in diff_expr_MHT[21:40]){
-  dat <- data[which(rownames(data)==gene),]
-  dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
+for (gene in all_genes[1:no_genes_inspect]){
+  for (sample in 1:length(testdata)){
+    dat <- data[[sample]][which(rownames(data[[sample]])==gene),]
+    dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
+    col <- as.numeric(as.vector(dat))
+    # Create a colour gradient
+    rbPal <- colorRampPalette(c('yellow','red'))
+    color_vector <- rbPal(10)[as.numeric(cut(col,breaks = 10))]
+    
+    xcoords <- as.numeric(sapply(strsplit(colnames(data[[sample]]), "x"), "[[", 1))
+    ycoords <- as.numeric(sapply(strsplit(colnames(data[[sample]]), "x"), "[[", 2))
+    
+    # Plot the spot array with colours according to the gradient.
+    #dev.new()
+    plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
+         ylab="", xlab="", main=paste(gene, sample), pch=19, cex.main=1,
+         xaxt="n", yaxt="n", bty="n", col.main="black")
   
-  col <- as.numeric(as.vector(dat))
-  # Create a colour gradient
-  rbPal <- colorRampPalette(c('yellow','red'))
-  color_vector <- rbPal(10)[as.numeric(cut(col,breaks = 10))]
-  
-  xcoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 1))
-  ycoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 2))
-  
-  # Plot the spot array with colours according to the gradient.
-  #dev.new()
-  plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
-       ylab="", xlab="", main=paste(gene, round(p_adj_diff[gene,1], digits=4)), pch=19, cex.main=1,
-       xaxt="n", yaxt="n", bty="n", col.main="black")
+  }
 }
