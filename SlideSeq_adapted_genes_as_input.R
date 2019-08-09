@@ -214,9 +214,7 @@ for (sample in 1:length(testdata)){
 #  argumentation, as well as the example in figure S10.
 #--------------------------------------------------------------------
 
-#jpeg("SlideSeq", width = 1000, height = 1000)
-#par(mfrow=c(length(gene_vector),(length(testdata)+1)))
-#par(mar=c(1,1,1,1))
+gg <- list()
 for (i in 1:length(all_genes)){
   
   eukdistr <- list()
@@ -339,33 +337,57 @@ for (i in 1:length(all_genes)){
   # Plot the expression of each gene on the array, as well as
   #  the difference between the gene's distribution and the mean 
   #  distribution, along with the sample number:
+  
+  gg[[i]] <- list()
   for (sample in 1:length(testdata)){
-    plots <- list()
     if (identical(which(genes[[sample]]==all_genes[i]), integer(0))){
-      plot(0, main=paste(all_genes[i], sample), cex.main=1.5, xaxt = 'n', yaxt = 'n', bty = 'n', pch = '', ylab = '', xlab = '')
-      text(1,0, "Sample not included \n in analysis")
+      df <- data.frame()
+      gg1 <- ggplot(df) + 
+        geom_point() + 
+        xlim(0, 10) + ylim(0, 100)+
+        theme_classic()+
+        ggtitle(paste(all_genes[i], sample), "\n Sample not included \n in analysis")+
+        theme(plot.title = element_text(hjust = 0.5))+
+        theme(legend.position="none", axis.line=element_blank(),
+              axis.text.x=element_blank(), axis.text.y=element_blank(),
+              axis.ticks=element_blank(), axis.title.x=element_blank(),
+              axis.title.y=element_blank())
+      gg[[i]][[sample]] <- gg1
+    
     } else{
-      col <- as.numeric(as.vector(data[[sample]][all_genes[i],]))
-      # Create a colour gradient
-      rbPal <- colorRampPalette(c('yellow','red'))
-      color_vector <- rbPal(10)[as.numeric(cut(col,breaks = 10))]
       xcoords <- as.numeric(sapply(strsplit(colnames(data[[sample]]), 
                                             "x"), "[[", 1))
       ycoords <- as.numeric(sapply(strsplit(colnames(data[[sample]]), 
                                             "x"), "[[", 2))
-      # Plot the spot array with colours according to the gradient.
-      plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1.2, asp=1,
-           ylab="", xlab="", main=paste(all_genes[i], sample), pch=19, cex.main=1.5,
-           xaxt="n", yaxt="n", bty="n", col.main="black")
+      df <- as.data.frame(cbind(xcoords, ycoords))
+      df$tot_counts <- as.numeric(as.vector(data[[sample]][all_genes[i],]))
+      gg1 <- ggplot(df, aes(x=xcoords, y=ycoords))+
+        geom_point(data=df, aes(x=xcoords, y=ycoords, color=tot_counts), size=4)+
+        scale_color_gradient(low="yellow", high="red")+
+        coord_fixed()+
+        theme_classic()+
+        ggtitle(paste(all_genes[i], sample))+
+        theme(plot.title = element_text(hjust = 0.5))+
+        theme(legend.position="none", axis.line=element_blank(),
+              axis.text.x=element_blank(), axis.text.y=element_blank(),
+              axis.ticks=element_blank(), axis.title.x=element_blank(),
+              axis.title.y=element_blank())
+      gg[[i]][[sample]] <- gg1
     }
   }
   
-  barplot(diff_real)
+  df <- as.data.frame(diff_real)
+  df$distance <- breaks[2:(length(breaks))]-0.5
+  gg2 <- ggplot(df, aes(x=bins, y=diff_real))+
+    geom_bar(stat="identity")+
+    theme_bw()+
+    theme(axis.title.y=element_blank())
+  gg[[i]][[length(testdata)+1]]
   
   cat(c(i, " out of ", length(all_genes), " finished\n"))
 }
 
-#dev.off()
+
 # In the paper by Rodriques et al. p-values of less than 0.005 were
 #  deemed significant.
 diff_expr <- genes[which(p[,1]<0.005)]
