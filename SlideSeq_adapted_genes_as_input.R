@@ -71,6 +71,7 @@ for (sample in 1:length(testdata)){
 par(mfrow=c(length(gene_vector),(length(testdata)+1)))
 par(mar=c(1,1,1,1))
 library(ggplot2)
+library("cowplot")
 
 #--------------------------------------------------------------------
 # Create a list of distance matrices, one for each sample
@@ -362,7 +363,7 @@ for (i in 1:length(all_genes)){
       df <- as.data.frame(cbind(xcoords, ycoords))
       df$tot_counts <- as.numeric(as.vector(data[[sample]][all_genes[i],]))
       gg1 <- ggplot(df, aes(x=xcoords, y=ycoords))+
-        geom_point(data=df, aes(x=xcoords, y=ycoords, color=tot_counts), size=4)+
+        geom_point(data=df, aes(x=xcoords, y=ycoords, color=tot_counts), size=1)+
         scale_color_gradient(low="yellow", high="red")+
         coord_fixed()+
         theme_classic()+
@@ -378,15 +379,17 @@ for (i in 1:length(all_genes)){
   
   df <- as.data.frame(diff_real)
   df$distance <- breaks[2:(length(breaks))]-0.5
-  gg2 <- ggplot(df, aes(x=bins, y=diff_real))+
+  gg2 <- ggplot(df, aes(x=distance, y=diff_real))+
     geom_bar(stat="identity")+
     theme_bw()+
     theme(axis.title.y=element_blank())
-  gg[[i]][[length(testdata)+1]]
+  gg[[i]][[length(testdata)+1]] <- gg2
   
   cat(c(i, " out of ", length(all_genes), " finished\n"))
 }
 
+gg_all <- unlist(gg, recursive=FALSE)
+fig <- plot_grid(plotlist=gg_all, nrow=length(gene_vector), ncol=(length(testdata)+1))
 
 # In the paper by Rodriques et al. p-values of less than 0.005 were
 #  deemed significant.
