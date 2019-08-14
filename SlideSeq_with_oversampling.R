@@ -17,16 +17,11 @@
 #  total number of transcripts in all spots. n (1000 in the paper by 
 #  Rodriques et al.) such sets are obtained, their distance 
 #  distributions are calculated, and the mean of these distributions 
-#  is taken. Thedistribution obtained for the gene under study is 
+#  is taken. The distribution obtained for the gene under study is 
 #  compared to this, and L1 norms are obtained and compared as in the 
-#  original method, see e.g. SlideSeq_direct_with_MHT.R for a 
+#  original method, see e.g. Direct_efficient_MHT.R for a 
 #  description.
-# In principle the same 1000 background distributions should be usable
-#  for all genes in this case (thus, n could possibly be increased 
-#  without any too great consequences for the computational time).
 #
-# Should multiple distributions be sampled for each gene?
-# Can we still calculate the p values in the same way?
 # What number of spots is reasonable to sample? Should depend on the 
 #  total no. spots, but how? If the same number is used for all spots,
 #  the pattern may be "increased" more for genes expressed in few 
@@ -42,10 +37,6 @@ data <- as.data.frame(t(read.table("Rep1_MOB_count_matrix-1.tsv",
 #  expression of less than 200 genes.
 testdata <- data[rowSums(data!=0)>9,]
 testdata <- testdata[,colSums(testdata!=0)>199]
-
-# Normalize the counts by total number of transcripts at each spot
-#spotwise_tot <- colSums(testdata)
-#testdata <- t(apply(testdata, 1, '/', spotwise_tot))
 
 # Normalize the counts using SCTransform
 library(Seurat)
@@ -102,10 +93,6 @@ breaks <- seq(0,maxdist+0.5, by=0.5)
 #  the total number of transcripts in each spot.) Indices are
 #  calculated since the actual output from the sampling will be 
 #  the index a specific spot has in the distance matrix. 
-
-# When normalizing: tot_spot should sum to 1, for each spot. The
-#  probability of sampling each spot is equal, so no P calculation
-#  needed for the background.
 #--------------------------------------------------------------------
 
 
@@ -115,7 +102,7 @@ P <- vector(mode="numeric", length=ncol(testdata))
 for (val in 1:length(P)){
   P[val] <- tot_spot[val]/tot
 }
-#P_s <- 1/ncol(testdata) 
+ 
 indices <- 1:ncol(testdata)
 
 
@@ -182,7 +169,6 @@ for (i in 1:nrow(equal_no_spots)){
   
   # The number of spots required, e.g. 3x the number of spots in
   #  which these genes are expressed
-  # NB - Är round lämpligt? Eller ceil eller floor?
   n_expressed <- as.numeric(rownames(equal_no_spots)[i])
   n_oversampling <- round(oversampling_factor*n_expressed)
   n_spots <- n_expressed + n_oversampling
