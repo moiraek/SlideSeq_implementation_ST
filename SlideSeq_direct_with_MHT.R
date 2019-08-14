@@ -34,10 +34,13 @@
 # 
 #-----------------------------------------------------------------------
 
+#-----------------------------------------------------------------------
+# Preparation
+#-----------------------------------------------------------------------
+
 setwd("/home/moiraek/summerp19/SlideSeq_etc/Till_git")
 
 data <- as.data.frame(t(read.table("Rep1_MOB_count_matrix-1.tsv", check.names=FALSE)))
-#data <- as.data.frame(read.table("hippocampus_wt_rep1.tsv", check.names=FALSE))
 
 # Remove genes with expression in less than 10 spots, and spots with
 #  expression of less than 200 genes.
@@ -77,6 +80,7 @@ for (j in 1:(ncol(testdata) - 1)){
 #  calculated since the actual output from the sampling will be 
 #  the index a specific spot has in the distance matrix. 
 #--------------------------------------------------------------------
+
 
 tot_spot <- colSums(testdata)
 tot <- sum(tot_spot)
@@ -198,6 +202,7 @@ for (i in 1:nrow(equal_no_spots)){
   eukl <- vector(mode="numeric", length=len)
   vals <- vector(mode="numeric", 
                  length=as.numeric(rownames(equal_no_spots)[i]) )
+  eukli <- matrix(0, ncol=n_random, nrow=n_random)
  
   for (j in 1:nrow(values)){
     vals <- which(values[j,]!=0)
@@ -292,3 +297,4 @@ ycoords <- as.numeric(sapply(strsplit(colnames(data), "x"), "[[", 2))
 plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
      ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5, 
      xaxt="n", yaxt="n", bty="n", col.main="black")
+
