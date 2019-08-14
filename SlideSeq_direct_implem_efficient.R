@@ -26,9 +26,10 @@
 #     are grouped together, and the same set of 1000 random sets
 #     of spots are used for all of the genes within such a group.
 # 
+# 
 #-----------------------------------------------------------------------
 
-setwd("/home/moiraek/summerp19/SlideSeq_etc/Till_git")
+setwd("/home/moiraek/summerp19/SlideSeq_etc/Till_git/")
 
 data <- as.data.frame(t(read.table("Rep1_MOB_count_matrix-1.tsv", check.names=FALSE)))
 
