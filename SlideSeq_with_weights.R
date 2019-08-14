@@ -219,16 +219,15 @@ for (i in 1:nrow(equal_no_transcr)){
   # The true distributions:
   eukl <- vector(mode="numeric", length=len)
   
-
-  for (j in 1:nrow(values)){
+  if (is.null(nrow(values))==TRUE){
     vals <- vector(mode="numeric", 
-                   length=length(which(values[j,]!=0)))
-    vals <- which(values[j,]!=0)
+                   length=length(which(values!=0)))
+    vals <- which(values!=0)
     for (m in vals){
       if (m==1){
-        vals_weighted <- rep(m, times=values[j,m])
+        vals_weighted <- rep(m, times=values[m])
       } else{
-        vals_weighted <- append(vals_weighted, rep(m, times=values[j,m]), 
+        vals_weighted <- append(vals_weighted, rep(m, times=values[m]), 
                                 after=length(vals_weighted))
       }
       
@@ -246,11 +245,44 @@ for (i in 1:nrow(equal_no_transcr)){
     
     # Calculation of p values
     if (length(over_L1)!=0){
-      p[rownames(values)[j],1] <- length(over_L1)/n
+      p[rownames(values),1] <- length(over_L1)/n
     } else {
-      p[rownames(values)[j],1] <- 1/(10*n)
+      p[rownames(values),1] <- 1/(10*n)
+    }
+  }else{
+    for (j in 1:nrow(values)){
+      vals <- vector(mode="numeric", 
+                     length=length(which(values[j,]!=0)))
+      vals <- which(values[j,]!=0)
+      for (m in vals){
+        if (m==1){
+          vals_weighted <- rep(m, times=values[j,m])
+        } else{
+          vals_weighted <- append(vals_weighted, rep(m, times=values[j,m]), 
+                                  after=length(vals_weighted))
+        }
+        
+      }
+      eukli <- euk[vals_weighted,vals_weighted]
+      eukl <- eukli[lower.tri(eukli, diag=FALSE)]
+      
+      eukdistr <- hist(eukl, breaks, plot=FALSE)
+      
+      diff_real <- eukdistr$counts - mean_counts
+      abs_diff_real <- abs(diff_real)
+      L1_norm_real <- sum(abs_diff_real)
+      
+      over_L1 <- L1_norms_rand[which(L1_norms_rand>=L1_norm_real)]
+      
+      # Calculation of p values
+      if (length(over_L1)!=0){
+        p[rownames(values)[j],1] <- length(over_L1)/n
+      } else {
+        p[rownames(values)[j],1] <- 1/(10*n)
+      }
     }
   }
+  cat(c(i, " out of ", nrow(equal_no_transcr), " finished\n"))
 }
 
 # In the paper by Rodriques et al. p-values of less than 0.005 were
