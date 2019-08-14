@@ -98,7 +98,7 @@ indices <- 1:length(P)
 #  one spot, as this will be meaningless (no distances) to test.
 #--------------------------------------------------------------------
 
-threshold <- 20
+threshold <- 5
 testdata[testdata<threshold] <- 0
 testdata <- testdata[which(rowSums(testdata) != 0),]
 
@@ -314,7 +314,7 @@ plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
      ylab="", xlab="", main=paste(gene), pch=19, cex.main=1.5,
      xaxt="n", yaxt="n", bty="n", col.main="black")
  
-for (gene in diff_expr_MHT_thr[20,251:300]){
+for (gene in diff_expr_MHT_thr[1,1:50]){
     col <- as.numeric(as.vector(data[which(rownames(data)==gene),]))
     # Create a colour gradient
     rbPal <- colorRampPalette(c('yellow','red'))
