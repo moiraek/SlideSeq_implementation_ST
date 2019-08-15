@@ -48,7 +48,7 @@
 # N.B. - This gives a large number of "spatially variable" genes. 
 #  A similar problem is descibed in the SlideSeq paper - look at how
 #  they solved it.
-
+#
 #-----------------------------------------------------------------------
 
 SlideSeq_SVid <- function(Samples, Filter_and_normalize, 
