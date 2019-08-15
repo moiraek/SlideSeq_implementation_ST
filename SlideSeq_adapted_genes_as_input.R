@@ -10,13 +10,13 @@
 #  a p-value for each gene as output, indicating whether or not it is
 #  spatially variable.
 #  
-# N.B. - look at how to extend this to accept count matrices from 
-#  multiple sections as input.
 # N.B. - Fix so that a single gene also works
 
-# Testar här anpassningen att köra generna var för sig, och ta
-#  bakgrunden på samma vis som de faktiska proverna - först ett visst
-#  antal utan återläggning, sedan ytterligare ett par med.
+# Here, the genes are analyzed one by one, and the background is
+#  sampled in a way that is more similar to the true distributions, 
+#  by first taking a certain number without replacement, and then
+#  an additional number with replacement.
+#  
 #
 #-----------------------------------------------------------------------
 
