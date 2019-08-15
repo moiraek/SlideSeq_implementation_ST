@@ -3,7 +3,7 @@
 # Moira Ek
 # 2019 08 08
 #
-# Attempt to adapt the SlideSeq_with_oversampling_limited.R method to
+# Attempt to adapt the Oversampling_limited.R method to
 #  accept multiple samples as input.
 # For each gene, the distances (both of the real distribution and
 #  within the 1000 random samples) are calculated separately for
@@ -11,16 +11,15 @@
 #  distribution, from which the method continues as if working with
 #  one sample.
 #
-# N.B. - Är det lämpligt att kombinera slumpproverna från olika prover
-#  ett och ett?
-# Önskad input: vektor med paths till countmatriser för de olika 
-#  proverna. Ut: en lista av SV gener och deras p-värden, och 
-#  optionally även p-värden för alla gener(?)
-# Problem: för att inte behöva spara undan alla fördelningar för alla
-#  slumpfördelningar för alla samples, etc, kan inte generna grupperas,
-#  varje gen måste behandlas för sig. Försök i nästa steg minska
-#  påverkan av detta på tidsåtgången (mycket stor) genom att 
-#  parallellisera koden.
+# Desired input: vector of paths to the count matrices for the 
+#  different samples. Out: a list of all spatially variable genes and 
+#  their p values, and optionally also the p values for the rest of
+#  the genes?
+# Problem: in order to not have to save all distributions for all random
+#  distributions for all samples, etc, the genes can't be grouped, each
+#  gene must be treated separately. In the next step: try to decrease
+#  the influence this has on the computational time (very long) by
+#  parallelizing the code.
 #-----------------------------------------------------------------------
 
 setwd("/home/moiraek/summerp19/SlideSeq_etc/Till_git")
@@ -212,10 +211,6 @@ for (i in 1:length(all_genes)){
       # If the gene is not present in this sample, no distances should
       #  be generated, and the values vector remains a vector of zeroes
       included_samples <- included_samples - 1
-      # n_spots <- 0
-      # 
-      # #The number of distances required
-      # len <- 0
     
     } else {
       # The counts for the gene in question, if it is included
@@ -360,10 +355,10 @@ print(Sys.time() - start_time)
 # --------------------------------------------------------------------
 library(ggplot2)
 
-no_genes_inspect <- 4
+no_genes_inspect <- 20
 par(mfrow=c(no_genes_inspect,length(testdata)))
 par(mar=c(1,1,1,1))
-for (gene in all_genes[1:no_genes_inspect]){
+for (gene in diff_expr_MHT[1:no_genes_inspect]){
   for (sample in 1:length(testdata)){
     dat <- data[[sample]][which(rownames(data[[sample]])==gene),]
     dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
