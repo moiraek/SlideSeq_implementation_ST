@@ -55,7 +55,7 @@
 # N.B. - This gives a large number of "spatially variable" genes. 
 #  A similar problem is descibed in the SlideSeq paper - look at how
 #  they solved it.
-
+#
 #-----------------------------------------------------------------------
 
 library(parallel)
@@ -336,7 +336,7 @@ SlideSeq_SVid <- function(Samples, Filter_and_normalize,
           expressed_indices <- which(values!=0)
           oversampling_indices <- sample(indices[[sample]], size=n_oversampling, 
                                          replace=TRUE, prob=P_cond)
-          gene_indices <- sort(c(expressed_indices,oversampling_indices))
+          gene_indices <- sort(c(expressed_indices, oversampling_indices))
           eukli <- euk[[sample]][gene_indices,gene_indices]
           eukl <- eukli[lower.tri(eukli, diag=FALSE)]
           
@@ -378,18 +378,18 @@ SlideSeq_SVid <- function(Samples, Filter_and_normalize,
       
       #Combining the distributions for each sample, both true and random:
       # True:
-      eukdistrib <- colMeans(do.call(rbind, eukdistr))
+      eukdistrib <- colSums(do.call(rbind, eukdistr))
       
       # Random:
       rand_distrib <- matrix(0, nrow = n, ncol = (length(breaks)-1))
       for (m in 1:n){
         # Extracting the m:th row from each matrix in the list, taking the
         #  mean of the number of elements in each bin
-        rand_distrib[m,] <- colMeans(do.call(rbind, lapply(counts_matrix_rand, `[`,m,)))
+        rand_distrib[m,] <- colSums(do.call(rbind, lapply(counts_matrix_rand, `[`,m,)))
       }
       
       # The mean background distribution
-      mean_counts <- colMeans(rand_distrib)
+      mean_counts <- colSums(rand_distrib)
       
       # Element-wise difference between the distance distributions of 
       #  the random samples and the mean distribution, as well as
@@ -468,20 +468,3 @@ SlideSeq_SVid <- function(Samples, Filter_and_normalize,
   return(p_adj_diff)
   
 }
-
-
-samples <- c("/home/moira.ek/SlideSeq/Rep1_MOB_count_matrix-1.tsv",
-                        "/home/moira.ek/SlideSeq/Rep2_MOB_count_matrix-1.tsv",
-                        "/home/moira.ek/SlideSeq/Rep3_MOB_count_matrix-1.tsv",
-                        "/home/moira.ek/SlideSeq/Rep4_MOB_count_matrix-1.tsv",
-                        "/home/moira.ek/SlideSeq/Rep5_MOB_count_matrix-1.tsv",
-                        "/home/moira.ek/SlideSeq/Rep6_MOB_count_matrix-1.tsv",
-                        "/home/moira.ek/SlideSeq/Rep7_MOB_count_matrix-1.tsv",
-                        "/home/moira.ek/SlideSeq/Rep8_MOB_count_matrix-1.tsv",
-                        "/home/moira.ek/SlideSeq/Rep9_MOB_count_matrix-1.tsv",
-                        "/home/moira.ek/SlideSeq/Rep10_MOB_count_matrix-1.tsv",
-                        "/home/moira.ek/SlideSeq/Rep11_MOB_count_matrix-1.tsv",
-                        "/home/moira.ek/SlideSeq/Rep12_MOB_count_matrix-1.tsv")
-p_diff <- SlideSeq_SVid(samples, Filter_and_normalize = TRUE, 
-                        Genes_as_rows = FALSE, FDR_limit = 0.05, 
-                        NoCores=10)
