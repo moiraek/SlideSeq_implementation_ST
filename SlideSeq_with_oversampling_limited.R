@@ -25,17 +25,18 @@
 #  their distance distributions are calculated, and the mean of these
 #  distributions is taken. The distribution obtained for the gene 
 #  under study is compared to this, and L1 norms are obtained and 
-#  compared as in the original method, see e.g. SlideSeq_direct_with_MHT.R 
+#  compared as in the original method, see e.g. Direct_efficient_MHT.R 
 #  for a description.
 
 
-# N.B. - Bakgrunden samplas nu helt och hållet med återläggning för att
-#  kunna gruppera generna (--> beroende på antalet spots kan t.ex. ca
-#  800 bakgrundsfördelningsset dras istället för drygt 13 000, vid ca 
-#  600 spots). Efter normaliseringen skiljer sig inte spotsen så mycket 
-#  åt i totalt antal transkript, så det är möjligt att detta inte har
-#  någon nämnbar effekt. Då ex har tillgång till severn: testa båda 
-#  varianter och jämför, för att se om detta är motiverat.
+# N.B. - The background is now sampled completely with replacement
+#  in order to enable grouping of the genes (--> depending on the 
+#  number of spots, about 800 background distributions can for instance
+#  be sampled rather than more than 13 000, at about 600 spots). After
+#  normalization the spots don't differ too much in their total number 
+#  of transcripts, so it is possible that this doesn't have any 
+#  appreciable impact. When have gotten access to the server: test
+#  both versions and compare, in order to see if this can be motivated.
 #
 #-----------------------------------------------------------------------
 
@@ -373,7 +374,7 @@ plot(x=xcoords, y=ycoords, col=alpha(color_vector, 1), lwd=1, asp=1,
 
 par(mfrow=c(5,4))
 par(mar=c(1,1,1,1))
-for (gene in diff_expr_MHT[301:320]){
+for (gene in setdiff(spatialDE, diff_expr_MHT)[21:40]){
   dat <- data[which(rownames(data)==gene),]
   dat[1,which(dat>quantile(dat,0.99)[1,1])]<-quantile(dat,0.99)[1,1]
 
