@@ -3,25 +3,22 @@
 # Moira Ek
 # 2019 08 12
 #
-# Attempt to parallelize the SlideSeq_with_oversampling_limited_multiple_
-#  samples.R 
+# Attempt to parallelize the Oversampling_limited_multiple_samples.R 
 # For each gene, the distances (both of the real distribution and
 #  within the 1000 random samples) are calculated separately for
 #  each sample, and these are then combined into one distance
 #  distribution, from which the method continues as if working with
 #  one sample.
 #
-# Önskad input: vektor med paths till countmatriser för de olika 
-#  proverna. Ut: en lista av SV gener och deras p-värden, och 
-#  optionally även p-värden för alla gener(?)
-# Problem: för att inte behöva spara undan alla fördelningar för alla
-#  slumpfördelningar för alla samples, etc, kan inte generna grupperas,
-#  varje gen måste behandlas för sig. Försök i nästa steg minska
-#  påverkan av detta på tidsåtgången (mycket stor) genom att 
-#  parallellisera koden.
+# Desired input: a vector of paths to the count matrices of the 
+#  different samples. Out: a list of spatially variable genes and their
+#  p values, optionally also p values for the rest of the genes(?).
 #-----------------------------------------------------------------------
 
 setwd("/home/moiraek/summerp19/SlideSeq_etc/Till_git")
+
+library(Seurat)
+library(parallel)
 
 samples <- c("/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep1_MOB_count_matrix-1.tsv",
              "/home/moiraek/summerp19/SlideSeq_etc/Till_git/Rep2_MOB_count_matrix-1.tsv",
@@ -47,7 +44,6 @@ testdata <- lapply(data, function(x) x[(rowSums(x!=0)>9),])
 testdata <- lapply(testdata, function(x) x[,colSums(x!=0)>199])
 
 # Normalize the counts using SCTransform
-library(Seurat)
 se <- lapply(testdata, CreateSeuratObject)
 se <- lapply(se, SCTransform)
 
@@ -149,9 +145,7 @@ for (sample in 1:length(testdata)){
 }
 
 all_genes <- unique(unlist(genes))
-# p <- matrix(0, nrow=length(all_genes), ncol=2)
-# p <- as.data.frame(p, row.names=all_genes)
-# colnames(p) <- c("p", "no_samples")
+
 
 non_zero <- list()
 non_zero_with_oversampl <- list()
@@ -210,10 +204,6 @@ for (k in 1:ncores){
   genes_core[[k]] <- na.omit(unique(genes_core[[k]]))
 }
 
-# until_unadj_p <- function(testdata, genes_to_analyze, breaks, 
-#                           euk, tot_spot, P, indices, factor_seur, 
-#                           genes, n, p, non_zero, non_zero_with_oversampl, 
-#                           tot)
 
 until_unadj_p <- function(genes_to_analyze) {
     p <- matrix(0, nrow=length(genes_to_analyze), ncol=2)
