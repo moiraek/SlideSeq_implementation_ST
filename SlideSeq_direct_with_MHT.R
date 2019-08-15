@@ -41,6 +41,8 @@
 setwd("/home/moiraek/summerp19/SlideSeq_etc/Till_git")
 
 data <- as.data.frame(t(read.table("Rep1_MOB_count_matrix-1.tsv", check.names=FALSE)))
+data <- as.data.frame(read.table("hippocampus_wt_rep1.tsv", 
+                                 check.names=FALSE))
 
 # Remove genes with expression in less than 10 spots, and spots with
 #  expression of less than 200 genes.
@@ -115,7 +117,7 @@ p <- as.data.frame(p, row.names=rownames(testdata),
 non_zero <- matrix(nrow=nrow(testdata),ncol=1)
 rownames(non_zero)<-rownames(testdata)
 for (i in 1:nrow(non_zero)){
-  non_zero[i,1] <- ncol(testdata[i, which(testdata[i,]!=0)])
+  non_zero[i,1] <- length(testdata[i, which(testdata[i,]!=0)])
 }
 
 # Group the genes expressed in the same number of spots on the rows of
